@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import { TOKENS, CONTRACT_ADDRESSES, SWAP_ABI } from "../constants/contracts";
 import { TokenIcon, IconSwap, IconRefresh } from "./Icons";
@@ -12,7 +12,7 @@ export default function LiveRatesCard() {
   const [simTokenOut, setSimTokenOut] = useState(TOKENS[1].address);
   const [calcResult, setCalcResult] = useState(null);
 
-  const fetchRates = async () => {
+  const fetchRates = useCallback(async () => {
     setLoading(true);
     try {
       const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
@@ -39,17 +39,22 @@ export default function LiveRatesCard() {
       setRates(results);
 
       if (simTokenIn && simTokenOut) {
-        if (simTokenIn === simTokenOut) {
+        if (simTokenIn.toLowerCase() === simTokenOut.toLowerCase()) {
           setCalcResult({
-            out: simAmount,
+            out: simAmount || "0",
+            minOut: simAmount || "0",
             rate: "1.0000",
           });
         } else {
           const parsedIn = ethers.parseUnits(simAmount || "0", 18);
           const outWei = await contract.quoteSwap(simTokenIn, simTokenOut, parsedIn);
           const rawRate = await contract.mockRates(simTokenIn, simTokenOut);
+          const outFormatted = parseFloat(ethers.formatUnits(outWei, 18)).toFixed(4);
+          const minOutFormatted = (parseFloat(outFormatted) * 0.995).toFixed(4);
+
           setCalcResult({
-            out: parseFloat(ethers.formatUnits(outWei, 18)).toFixed(4),
+            out: outFormatted,
+            minOut: minOutFormatted,
             rate: (Number(rawRate) / 10000).toFixed(4),
           });
         }
@@ -59,14 +64,16 @@ export default function LiveRatesCard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [simAmount, simTokenIn, simTokenOut]);
 
   useEffect(() => {
     fetchRates();
-  }, [simAmount, simTokenIn, simTokenOut]);
+  }, [fetchRates]);
 
-  const tokenInInfo = TOKENS.find((t) => t.address === simTokenIn) || TOKENS[0];
-  const tokenOutInfo = TOKENS.find((t) => t.address === simTokenOut) || TOKENS[1];
+  const tokenInInfo =
+    TOKENS.find((t) => t.address.toLowerCase() === simTokenIn.toLowerCase()) || TOKENS[0];
+  const tokenOutInfo =
+    TOKENS.find((t) => t.address.toLowerCase() === simTokenOut.toLowerCase()) || TOKENS[1];
 
   const handleFlip = () => {
     const temp = simTokenIn;
@@ -75,38 +82,27 @@ export default function LiveRatesCard() {
   };
 
   return (
-    <div className="glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 bg-white shadow-sm space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <IconSwap className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Kalkulator & Kurs Real-Time Smart Contract
-            </h3>
-            <p className="text-xs text-slate-500">
-              Rasio swap on-chain langsung dari smart contract (presisi basis point 10000)
-            </p>
-          </div>
+    <div className="rounded-2xl p-6 border border-slate-200/80 bg-white shadow-xs space-y-5 text-[#0B192C]">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 className="text-base font-extrabold text-[#0B192C]">Kurs & Kalkulator Swap</h3>
+          <p className="text-xs text-slate-500">Estimasi pertukaran instan lintas token mock ERC-20 di Sepolia</p>
         </div>
+
         <button
           onClick={fetchRates}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition cursor-pointer"
         >
-          <IconRefresh className="w-3.5 h-3.5" isSpinning={loading} />
-          <span>Refresh</span>
+          <IconRefresh className="w-3.5 h-3.5 text-blue-600" isSpinning={loading} />
+          <span>{loading ? "..." : "Refresh"}</span>
         </button>
       </div>
 
-      {/* Simulator Widget */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200/80">
-        <div className="md:col-span-5 space-y-1.5">
-          <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Anda Kirim (Input)
-          </label>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5 focus-within:border-indigo-600 focus-within:ring-1 focus-within:ring-indigo-600 transition shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200/70">
+        <div className="md:col-span-5 space-y-1">
+          <label className="text-[11px] text-slate-500 font-semibold">Input (Anda Bayar)</label>
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
             <TokenIcon symbol={tokenInInfo.symbol} size="w-6 h-6" />
             <input
               type="number"
@@ -114,12 +110,12 @@ export default function LiveRatesCard() {
               min="0"
               value={simAmount}
               onChange={(e) => setSimAmount(e.target.value)}
-              className="w-full bg-transparent text-slate-900 font-bold text-base focus:outline-none"
+              className="w-full bg-transparent text-[#0B192C] font-extrabold text-base focus:outline-none"
             />
             <select
               value={simTokenIn}
               onChange={(e) => setSimTokenIn(e.target.value)}
-              className="bg-slate-100 text-xs font-semibold text-slate-800 rounded-lg px-2 py-1 focus:outline-none border border-slate-200"
+              className="bg-slate-50 text-xs font-bold text-slate-800 rounded-lg px-2 py-1 border border-slate-200 focus:outline-none cursor-pointer"
             >
               {TOKENS.map((t) => (
                 <option key={t.address} value={t.address}>
@@ -130,22 +126,20 @@ export default function LiveRatesCard() {
           </div>
         </div>
 
-        <div className="md:col-span-2 flex justify-center py-2 md:py-0">
+        <div className="md:col-span-2 flex justify-center">
           <button
             type="button"
             onClick={handleFlip}
-            className="w-10 h-10 rounded-full bg-white hover:bg-indigo-600 border border-slate-200 hover:border-indigo-600 text-slate-700 hover:text-white flex items-center justify-center transition shadow-md cursor-pointer"
-            title="Tukar Posisi Koin"
+            className="w-9 h-9 rounded-xl bg-white hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200 flex items-center justify-center transition cursor-pointer shadow-2xs"
+            title="Tukar Posisi"
           >
             <IconSwap className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="md:col-span-5 space-y-1.5">
-          <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-            Estimasi Diterima (Output)
-          </label>
-          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm">
+        <div className="md:col-span-5 space-y-1">
+          <label className="text-[11px] text-slate-500 font-semibold">Output (Diterima)</label>
+          <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
             <TokenIcon symbol={tokenOutInfo.symbol} size="w-6 h-6" />
             <span className="w-full text-emerald-600 font-extrabold text-base truncate">
               {calcResult?.out || "0.00"}
@@ -153,7 +147,7 @@ export default function LiveRatesCard() {
             <select
               value={simTokenOut}
               onChange={(e) => setSimTokenOut(e.target.value)}
-              className="bg-slate-100 text-xs font-semibold text-slate-800 rounded-lg px-2 py-1 focus:outline-none border border-slate-200"
+              className="bg-slate-50 text-xs font-bold text-slate-800 rounded-lg px-2 py-1 border border-slate-200 focus:outline-none cursor-pointer"
             >
               {TOKENS.map((t) => (
                 <option key={t.address} value={t.address}>
@@ -165,8 +159,7 @@ export default function LiveRatesCard() {
         </div>
       </div>
 
-      {/* Quick Rate Tickers */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
         {[
           { pair: "mUSD → mEUR", key: "mUSD-mEUR" },
           { pair: "mEUR → mUSD", key: "mEUR-mUSD" },
@@ -177,12 +170,12 @@ export default function LiveRatesCard() {
         ].map((item) => (
           <div
             key={item.key}
-            className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-center"
+            className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center"
           >
-            <p className="text-[11px] text-slate-500 font-medium">{item.pair}</p>
-            <p className="text-xs font-mono font-bold text-indigo-700 mt-1">
+            <span className="text-[11px] font-semibold text-slate-500 block">{item.pair}</span>
+            <span className="text-xs font-mono font-extrabold text-blue-600 mt-0.5 block">
               {rates[item.key] || "..."}
-            </p>
+            </span>
           </div>
         ))}
       </div>

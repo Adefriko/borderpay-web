@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ethers } from "ethers";
 import {
   TOKENS,
@@ -11,6 +12,11 @@ import {
 } from "../../constants/contracts";
 import { triggerConfetti } from "../../components/Confetti";
 import TokenBalancesModal from "../../components/TokenBalancesModal";
+import PaymentTimeline from "../../components/PaymentTimeline";
+import TransactionReceiptModal from "../../components/TransactionReceiptModal";
+import { useToast } from "../../components/ToastContext";
+import { verifyInvoiceIntegrity } from "../../lib/invoiceIntegrity";
+import { updateInvoiceStatus } from "../../lib/invoiceStore";
 import {
   IconBorderPayLogo,
   TokenIcon,
@@ -56,12 +62,14 @@ function playPaymentSuccessChime() {
     osc1.stop(ctx.currentTime + 0.6);
     osc2.stop(ctx.currentTime + 0.6);
   } catch (e) {
-    // Ignore audio permission restrictions
+    // Ignore audio restrictions
   }
 }
 
 function PaymentContent() {
   const searchParams = useSearchParams();
+  const toast = useToast();
+
   const orderId = searchParams.get("orderId") || "";
   const receiver = searchParams.get("receiver") || "";
   const tokenOutAddr = searchParams.get("tokenOut") || TOKENS[0].address;
@@ -69,23 +77,57 @@ function PaymentContent() {
   const deadline = parseInt(searchParams.get("deadline") || "0");
   const memo = searchParams.get("memo") || "Pembayaran Tagihan BorderPay";
   const merchantName = searchParams.get("merchant") || "";
+  const checksum = searchParams.get("checksum") || "";
 
   const [walletAddress, setWalletAddress] = useState("");
   const [chainId, setChainId] = useState("");
   const [tokenInAddr, setTokenInAddr] = useState(TOKENS[0].address);
   const [allBalances, setAllBalances] = useState({});
+  const [ethBalance, setEthBalance] = useState("0");
   const [requiredAmountIn, setRequiredAmountIn] = useState(amountOut);
   const [rateDisplay, setRateDisplay] = useState("1.0000");
-  const [status, setStatus] = useState("IDLE");
+
+  const [estimatedGasEth, setEstimatedGasEth] = useState("~0.0008");
+  const [isGasSufficient, setIsGasSufficient] = useState(true);
+  const [isEstimatingGas, setIsEstimatingGas] = useState(false);
+
+  const [status, setStatus] = useState("IDLE"); // "IDLE" | "APPROVING" | "SWAPPING" | "SUCCESS" | "ERROR"
   const [txHash, setTxHash] = useState("");
+  const [approvalTxHash, setApprovalTxHash] = useState("");
+  const [confirmedBlock, setConfirmedBlock] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isApprovalRequired, setIsApprovalRequired] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+
   const [isExpired, setIsExpired] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [integrityState, setIntegrityState] = useState({
+    status: "CHECKING",
+    isValid: true,
+    isTampered: false,
+    message: "",
+  });
+
   const [copiedOrder, setCopiedOrder] = useState(false);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
-  const tokenOutInfo = TOKENS.find((t) => t.address.toLowerCase() === tokenOutAddr.toLowerCase()) || TOKENS[0];
-  const tokenInInfo = TOKENS.find((t) => t.address.toLowerCase() === tokenInAddr.toLowerCase()) || TOKENS[0];
+  const tokenOutInfo =
+    TOKENS.find((t) => t.address.toLowerCase() === tokenOutAddr.toLowerCase()) || TOKENS[0];
+  const tokenInInfo =
+    TOKENS.find((t) => t.address.toLowerCase() === tokenInAddr.toLowerCase()) || TOKENS[0];
+
+  useEffect(() => {
+    const res = verifyInvoiceIntegrity({
+      orderId,
+      receiver,
+      tokenOut: tokenOutAddr,
+      amount: amountOut,
+      deadline,
+      checksum,
+    });
+    setIntegrityState(res);
+  }, [orderId, receiver, tokenOutAddr, amountOut, deadline, checksum]);
 
   useEffect(() => {
     const checkExpiry = () => {
@@ -129,32 +171,97 @@ function PaymentContent() {
     fetchQuote();
   }, [tokenInAddr, tokenOutAddr, amountOut]);
 
-  useEffect(() => {
-    const fetchBalances = async () => {
-      if (!walletAddress || typeof window === "undefined" || !window.ethereum) return;
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const bals = {};
-        for (const token of TOKENS) {
-          try {
-            const tokenContract = new ethers.Contract(token.address, ERC20_ABI, provider);
-            const rawBal = await tokenContract.balanceOf(walletAddress);
-            bals[token.address.toLowerCase()] = ethers.formatUnits(rawBal, 18);
-          } catch {
-            bals[token.address.toLowerCase()] = "0";
-          }
+  const refreshWalletState = useCallback(async () => {
+    if (!walletAddress || typeof window === "undefined" || !window.ethereum) return;
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+
+      const ethBal = await provider.getBalance(walletAddress);
+      const formattedEth = ethers.formatEther(ethBal);
+      setEthBalance(formattedEth);
+
+      const bals = {};
+      for (const token of TOKENS) {
+        try {
+          const tokenContract = new ethers.Contract(token.address, ERC20_ABI, provider);
+          const rawBal = await tokenContract.balanceOf(walletAddress);
+          bals[token.address.toLowerCase()] = ethers.formatUnits(rawBal, 18);
+        } catch {
+          bals[token.address.toLowerCase()] = "0";
         }
-        setAllBalances(bals);
-      } catch (err) {
-        console.error("Gagal load saldo wallet:", err);
+      }
+      setAllBalances(bals);
+
+      const inContract = new ethers.Contract(tokenInAddr, ERC20_ABI, provider);
+      const allowance = await inContract.allowance(walletAddress, CONTRACT_ADDRESSES.CoinSwapPayment);
+      const reqInWei = ethers.parseUnits(requiredAmountIn || "0", 18);
+
+      if (tokenInAddr.toLowerCase() !== tokenOutAddr.toLowerCase() || true) {
+        const needsApprove = allowance < reqInWei;
+        setIsApprovalRequired(needsApprove);
+        setIsApproved(!needsApprove);
+      }
+
+      setIsEstimatingGas(true);
+      try {
+        const feeData = await provider.getFeeData();
+        const gasPrice = feeData.gasPrice || ethers.parseUnits("2", "gwei");
+        // Gas limit units: ~150,000 swap, ~50,000 approve
+        const estimatedUnits = isApprovalRequired ? 220000n : 160000n;
+        const totalGasWei = gasPrice * estimatedUnits;
+        const estEth = parseFloat(ethers.formatEther(totalGasWei)).toFixed(5);
+        setEstimatedGasEth(estEth);
+
+        setIsGasSufficient(parseFloat(formattedEth) >= parseFloat(estEth));
+      } catch (gasErr) {
+        console.warn("Gas estimation notice:", gasErr);
+      } finally {
+        setIsEstimatingGas(false);
+      }
+    } catch (err) {
+      console.error("Gagal memuat saldo atau gas:", err);
+    }
+  }, [walletAddress, tokenInAddr, tokenOutAddr, requiredAmountIn, isApprovalRequired]);
+
+  useEffect(() => {
+    refreshWalletState();
+  }, [refreshWalletState]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.ethereum) return;
+
+    const handleAccounts = (accounts) => {
+      if (accounts && accounts.length > 0) {
+        setWalletAddress(accounts[0]);
+        toast.info("Akun Berganti", `Terhubung: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
+      } else {
+        setWalletAddress("");
+        toast.warning("Wallet Terputus", "Koneksi wallet telah dihentikan.");
       }
     };
-    fetchBalances();
-  }, [walletAddress]);
+
+    const handleChain = (chain) => {
+      setChainId(chain);
+      if (chain.toLowerCase() !== SEPOLIA_CHAIN_ID.toLowerCase()) {
+        toast.warning("Jaringan Salah", "Harap beralih ke Ethereum Sepolia.");
+      } else {
+        toast.success("Jaringan Sepolia", "Terhubung ke Sepolia Testnet.");
+      }
+    };
+
+    window.ethereum.on?.("accountsChanged", handleAccounts);
+    window.ethereum.on?.("chainChanged", handleChain);
+
+    return () => {
+      window.ethereum.removeListener?.("accountsChanged", handleAccounts);
+      window.ethereum.removeListener?.("chainChanged", handleChain);
+    };
+  }, [toast]);
 
   const connectAndValidateNetwork = async () => {
     if (typeof window === "undefined" || !window.ethereum) {
-      return alert("Wallet tidak ditemukan! Harap pasang ekstensi MetaMask.");
+      toast.error("MetaMask Tidak Ditemukan", "Harap pasang ekstensi MetaMask di browser.");
+      return;
     }
     try {
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -174,6 +281,7 @@ function PaymentContent() {
           setErrorMsg("Harap ganti jaringan wallet ke Ethereum Sepolia.");
         }
       }
+      toast.success("Wallet Terhubung", `${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`);
     } catch (err) {
       setErrorMsg("Gagal menghubungkan wallet atau berpindah ke jaringan Sepolia.");
     }
@@ -181,9 +289,22 @@ function PaymentContent() {
 
   const handlePayment = async () => {
     setErrorMsg("");
-    if (isExpired) return setErrorMsg("QR Invoice sudah kedaluwarsa!");
+
+    if (integrityState.isTampered) {
+      return setErrorMsg(
+        "Peringatan Keamanan: Invoice telah dimodifikasi secara ilegal. Pembayaran dibatalkan!"
+      );
+    }
+    if (isExpired) {
+      return setErrorMsg("QR Invoice sudah kedaluwarsa!");
+    }
     if (chainId.toLowerCase() !== SEPOLIA_CHAIN_ID.toLowerCase()) {
-      return setErrorMsg("Harap gunakan jaringan Ethereum Sepolia!");
+      return setErrorMsg("Harap gunakan jaringan Ethereum Sepolia (0xaa36a7)!");
+    }
+    if (!isGasSufficient) {
+      return setErrorMsg(
+        `Saldo Sepolia ETH Anda (${parseFloat(ethBalance).toFixed(4)} ETH) tidak mencukupi untuk estimasi gas (${estimatedGasEth} ETH)!`
+      );
     }
 
     try {
@@ -191,14 +312,15 @@ function PaymentContent() {
       const signer = await provider.getSigner();
 
       const amountInWei = ethers.parseUnits(requiredAmountIn, 18);
-      const minAmountOutWei = ethers.parseUnits(amountOut, 18);
+      const minAmountOutWei = (ethers.parseUnits(amountOut, 18) * 995n) / 1000n; // 0.5% slippage safety
 
       const tokenContract = new ethers.Contract(tokenInAddr, ERC20_ABI, signer);
       const swapContract = new ethers.Contract(CONTRACT_ADDRESSES.CoinSwapPayment, SWAP_ABI, signer);
 
+      // Anti-Replay check on-chain
       const alreadyUsed = await swapContract.isOrderProcessed(orderId);
       if (alreadyUsed) {
-        return setErrorMsg("Order ID ini sudah pernah diproses sebelumnya (Anti-Replay)!");
+        return setErrorMsg("Order ID ini sudah pernah diproses sebelumnya (Anti-Replay Protection)!");
       }
 
       const userBal = await tokenContract.balanceOf(walletAddress);
@@ -215,14 +337,18 @@ function PaymentContent() {
 
       if (currentAllowance < amountInWei) {
         setStatus("APPROVING");
-        const approveTx = await tokenContract.approve(
-          CONTRACT_ADDRESSES.CoinSwapPayment,
-          amountInWei
-        );
-        await approveTx.wait();
+        toast.info("Menyetujui Allowance", "Harap konfirmasi transaksi persetujuan token di wallet...");
+        const approveTx = await tokenContract.approve(CONTRACT_ADDRESSES.CoinSwapPayment, amountInWei);
+        setApprovalTxHash(approveTx.hash);
+        const approveReceipt = await approveTx.wait();
+        if (approveReceipt.status === 1) {
+          setIsApproved(true);
+          toast.success("Allowance Disetujui", "Izin pengeluaran token telah dikonfirmasi di blok.");
+        }
       }
 
       setStatus("SWAPPING");
+      toast.info("Eksekusi Pembayaran", "Harap konfirmasi transaksi pembayaran/swap di wallet...");
       const tx = await swapContract.payOrSwap(
         orderId,
         tokenInAddr,
@@ -233,18 +359,33 @@ function PaymentContent() {
         deadline
       );
 
+      toast.info("Transaksi Terkirim", "Menunggu konfirmasi blockchain Sepolia...");
       const receipt = await tx.wait();
-      setTxHash(receipt.hash);
-      setStatus("SUCCESS");
 
-      triggerConfetti();
-      playPaymentSuccessChime();
+      if (receipt.status === 1) {
+        setTxHash(receipt.hash);
+        setConfirmedBlock(receipt.blockNumber);
+        setStatus("SUCCESS");
+
+        updateInvoiceStatus(orderId, "PAID");
+
+        triggerConfetti();
+        playPaymentSuccessChime();
+        toast.success("Pembayaran Sukses!", "Transaksi telah tercatat permanen di Sepolia.");
+
+        triggerConfetti();
+        playPaymentSuccessChime();
+        toast.success("Pembayaran Sukses!", "Transaksi telah tercatat permanen di Sepolia.");
+      } else {
+        throw new Error("Transaksi gagal dieksekusi di blockchain.");
+      }
     } catch (err) {
       console.error(err);
       setStatus("ERROR");
-      setErrorMsg(
-        err.reason || err.shortMessage || err.message || "Transaksi dibatalkan atau gagal di blockchain."
-      );
+      const cleanErr =
+        err.reason || err.shortMessage || err.message || "Transaksi dibatalkan atau gagal di blockchain.";
+      setErrorMsg(cleanErr);
+      toast.error("Transaksi Gagal", cleanErr);
     }
   };
 
@@ -257,6 +398,7 @@ function PaymentContent() {
   const copyOrderId = () => {
     navigator.clipboard.writeText(orderId);
     setCopiedOrder(true);
+    toast.info("Order ID Tersalin", orderId);
     setTimeout(() => setCopiedOrder(false), 2000);
   };
 
@@ -269,32 +411,45 @@ function PaymentContent() {
   const isBalanceSufficient =
     !walletAddress || currentPayerBalance >= parseFloat(requiredAmountIn || "0");
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 sm:p-6 lg:p-10 relative selection:bg-indigo-500/20 selection:text-indigo-900">
-      {/* Background Soft Glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-10 left-1/4 w-96 h-96 bg-indigo-100/60 rounded-full blur-[140px]" />
-        <div className="absolute bottom-10 right-1/4 w-96 h-96 bg-emerald-100/50 rounded-full blur-[140px]" />
-      </div>
+  const receiptData = {
+    txHash,
+    orderId,
+    blockNumber: confirmedBlock,
+    sender: walletAddress,
+    receiver,
+    pair: `${tokenInInfo.symbol} → ${tokenOutInfo.symbol}`,
+    tokenInSymbol: tokenInInfo.symbol,
+    tokenOutSymbol: tokenOutInfo.symbol,
+    amountIn: formattedReqIn,
+    amountOut,
+  };
 
+  return (
+    <div className="min-h-screen bg-[#F3F7FC] text-[#0B192C] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-10 relative selection:bg-blue-600/20 selection:text-blue-900">
       <div className="w-full max-w-4xl space-y-6">
-        {/* Top Mini Brand Bar */}
         <div className="flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5 hover:opacity-85 transition">
-            <IconBorderPayLogo className="w-8 h-8" />
-            <span className="font-extrabold text-lg tracking-tight text-slate-900">
-              BorderPay Checkout
-            </span>
-          </a>
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-85 transition">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+              <span className="font-extrabold text-lg">B</span>
+            </div>
+            <div>
+              <span className="font-extrabold text-lg tracking-tight text-[#0B192C] block leading-tight">
+                BorderPay Checkout
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium block">
+                Web3 QR Payment & Swap
+              </span>
+            </div>
+          </Link>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 flex items-center gap-1.5 shadow-sm">
+            <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 flex items-center gap-1.5 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Sepolia Testnet</span>
             </span>
             <button
               onClick={() => setIsAssetModalOpen(true)}
-              className="text-xs font-semibold px-3 py-1 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-sm cursor-pointer"
+              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-2xs cursor-pointer"
               title="Cek Saldo Koin"
             >
               Saldo 💳
@@ -302,103 +457,120 @@ function PaymentContent() {
           </div>
         </div>
 
-        {/* 2-Column Checkout Layout */}
+        {integrityState.isTampered && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-300 shadow-md flex items-start gap-3 text-rose-800 animate-shake">
+            <span className="text-xl">🚨</span>
+            <div>
+              <h4 className="font-bold text-sm text-rose-900">
+                Peringatan Keamanan: Integritas Invoice Gagal!
+              </h4>
+              <p className="text-xs text-rose-700 mt-0.5 leading-relaxed">
+                Parameter tagihan ini (nominal, penerima, atau deadline) telah dimodifikasi dari
+                data asli yang dibuat merchant. Pembayaran otomatis dinonaktifkan untuk melindungi
+                dana Anda.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Order Summary */}
-          <div className="lg:col-span-5 glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 bg-white shadow-sm space-y-6">
+          <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 border border-slate-200/80 bg-white shadow-xs space-y-6 text-slate-800">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-blue-600" />
+                <h2 className="text-sm font-extrabold text-[#0B192C] uppercase tracking-wider">
                   Ringkasan Tagihan
                 </h2>
               </div>
               <span
                 className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                   isExpired
-                    ? "bg-red-50 text-red-600 border border-red-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    ? "bg-rose-50 text-rose-600 border border-rose-200"
+                    : integrityState.isValid
+                    ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                    : "bg-amber-50 text-amber-600 border border-amber-200"
                 }`}
               >
-                {isExpired ? "Kedaluwarsa" : "Invoice Aktif"}
+                {isExpired
+                  ? "Kedaluwarsa"
+                  : integrityState.isValid
+                  ? "✓ Verified Hash"
+                  : "Legacy Invoice"}
               </span>
             </div>
 
-            {/* Merchant Identity if Available */}
             {merchantName && (
-              <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center gap-3">
-                <span className="w-9 h-9 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center text-sm">
+              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-100 flex items-center gap-3">
+                <span className="w-9 h-9 rounded-xl bg-[#1951FC] text-white font-bold flex items-center justify-center text-sm shadow-sm">
                   {merchantName[0].toUpperCase()}
                 </span>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-bold text-slate-900">{merchantName}</p>
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                      ✓ Verified
+                    <p className="text-xs font-bold text-[#0B192C]">{merchantName}</p>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-700">
+                      Merchant POS
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">Merchant Terverifikasi</p>
+                  <p className="text-[11px] text-slate-500">Verified Profile</p>
                 </div>
               </div>
             )}
 
-            {/* Amount Highlight */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 text-center space-y-1">
-              <span className="text-xs text-slate-500 font-medium">Total Diterima Merchant</span>
-              <div className="flex items-center justify-center gap-2">
-                <TokenIcon symbol={tokenOutInfo.symbol} size="w-7 h-7" />
-                <span className="text-3xl font-extrabold text-slate-900">
+              <span className="text-xs text-slate-500 font-semibold">Total Diterima Merchant</span>
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <TokenIcon symbol={tokenOutInfo.symbol} size="w-8 h-8" />
+                <span className="text-3xl font-extrabold text-[#0B192C]">
                   {amountOut} {tokenOutInfo.symbol}
                 </span>
               </div>
-              {memo && <p className="text-xs text-slate-500 mt-1 italic font-sans">{memo}</p>}
+              {memo && <p className="text-xs text-slate-600 mt-1 italic font-sans">{memo}</p>}
             </div>
 
-            {/* Breakdown Details */}
             <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                <span className="text-slate-500">Merchant Penerima:</span>
-                <span className="font-mono font-medium text-slate-800">
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Merchant Penerima:</span>
+                <span className="font-mono font-bold text-slate-800">
                   {receiver ? `${receiver.slice(0, 8)}...${receiver.slice(-6)}` : "-"}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                <span className="text-slate-500">Masa Berlaku Invoice:</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Masa Berlaku Invoice:</span>
                 <span
-                  className={`font-semibold flex items-center gap-1 ${
+                  className={`font-bold flex items-center gap-1 ${
                     timeRemaining < 120 ? "text-amber-600 animate-pulse" : "text-slate-800"
                   }`}
                 >
-                  <IconClock className="w-3.5 h-3.5" />
+                  <IconClock className="w-3.5 h-3.5 text-blue-600" />
                   <span>{timeRemaining > 0 ? formatTimer(timeRemaining) : "Habis"}</span>
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                <span className="text-slate-500">Biaya Protokol Swap:</span>
-                <span className="text-emerald-700 font-semibold">0.00% (Simulasi Bebas Biaya)</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Biaya Protokol:</span>
+                <span className="text-emerald-600 font-bold">0.00%</span>
               </div>
 
-              <div className="flex justify-between items-center py-1 border-b border-slate-100">
-                <span className="text-slate-500">Jaminan Keamanan:</span>
-                <span className="text-slate-800 font-medium flex items-center gap-1">
-                  <IconShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Tipe Smart Contract:</span>
+                <span className="text-slate-800 font-bold flex items-center gap-1">
+                  <IconShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Non-Custodial Escrow</span>
                 </span>
               </div>
 
               <div className="space-y-1 pt-1">
-                <span className="text-slate-500 block text-[11px]">Order ID (Hash):</span>
+                <span className="text-slate-500 block text-[11px] font-medium">Order ID (Hash):</span>
                 <button
                   type="button"
                   onClick={copyOrderId}
-                  className="w-full text-left font-mono text-[11px] text-slate-700 break-all bg-slate-50 p-2 rounded-xl border border-slate-200 hover:border-slate-300 transition flex items-center justify-between"
+                  className="w-full text-left font-mono text-[11px] text-slate-700 break-all bg-slate-50 p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 transition flex items-center justify-between cursor-pointer"
                   title="Klik untuk salin Order ID"
                 >
                   <span className="truncate">{orderId}</span>
                   {copiedOrder ? (
-                    <IconCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 ml-1" />
+                    <IconCheck className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 ml-1" />
                   ) : (
                     <IconCopy className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 ml-1" />
                   )}
@@ -407,36 +579,30 @@ function PaymentContent() {
             </div>
 
             <div className="pt-2 text-center">
-              <a
+              <Link
                 href="/"
-                className="text-xs text-slate-500 hover:text-slate-800 font-medium transition flex items-center justify-center gap-1.5"
+                className="text-xs text-blue-600 hover:text-blue-800 font-bold transition flex items-center justify-center gap-1.5"
               >
-                <span>← Kembali ke Pembuat QR</span>
-              </a>
+                <span>← Kembali ke Dashboard</span>
+              </Link>
             </div>
           </div>
 
-          {/* Right Column: Multi-Currency Payment Engine */}
-          <div className="lg:col-span-7 glass-card rounded-3xl p-6 sm:p-7 border border-slate-200 bg-white shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Metode Pembayaran & Koin</h2>
-                <p className="text-xs text-slate-500">Pilih token yang ingin Anda belanjakan</p>
-              </div>
+          <div className="lg:col-span-7 rounded-3xl p-6 sm:p-7 border border-slate-200/80 bg-white shadow-xs space-y-6 text-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-extrabold text-[#0B192C]">Pilih Token Bayar</h2>
 
               {walletAddress && (
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">Payer Terhubung:</span>
-                  <span className="font-mono text-xs font-semibold text-slate-700">
+                  <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
                     {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Token Selector Cards */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-slate-700">
+              <label className="text-xs font-bold text-slate-700">
                 Pilih Token untuk Membayar:
               </label>
 
@@ -449,21 +615,23 @@ function PaymentContent() {
                     <button
                       key={t.address}
                       type="button"
-                      disabled={status === "APPROVING" || status === "SWAPPING" || status === "SUCCESS"}
+                      disabled={
+                        status === "APPROVING" || status === "SWAPPING" || status === "SUCCESS"
+                      }
                       onClick={() => setTokenInAddr(t.address)}
                       className={`p-3.5 rounded-2xl border transition text-left cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? "bg-indigo-50/70 border-indigo-600 ring-2 ring-indigo-600/20 shadow-sm"
-                          : "bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-700"
+                          ? "bg-blue-50 border-blue-500 ring-2 ring-blue-500/20 shadow-xs"
+                          : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700"
                       }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <TokenIcon symbol={t.symbol} size="w-7 h-7" />
-                        {isSelected && <IconCheck className="w-4 h-4 text-indigo-600" />}
+                        {isSelected && <IconCheck className="w-4 h-4 text-blue-600" />}
                       </div>
 
                       <div className="mt-2.5">
-                        <span className="block font-bold text-sm text-slate-900">{t.symbol}</span>
+                        <span className="block font-extrabold text-sm text-[#0B192C]">{t.symbol}</span>
                         <span className="text-[11px] text-slate-500 font-mono mt-0.5 block">
                           Saldo: <strong className="text-slate-800">{walletAddress ? bal : "—"}</strong>
                         </span>
@@ -474,33 +642,53 @@ function PaymentContent() {
               </div>
             </div>
 
-            {/* Live Swap Calculation Box */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">Kurs Eksekusi Smart Contract:</span>
-                <span className="font-mono font-bold text-indigo-700">
+                <span className="text-slate-500 font-semibold">Kurs Eksekusi Smart Contract:</span>
+                <span className="font-mono font-extrabold text-blue-600">
                   1 {tokenInInfo.symbol} = {rateDisplay} {tokenOutInfo.symbol}
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
                 <div>
-                  <span className="text-[11px] text-slate-500 block">Total yang Harus Anda Bayar:</span>
+                  <span className="text-[11px] text-slate-500 font-medium block">
+                    Total yang Harus Anda Bayar:
+                  </span>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <TokenIcon symbol={tokenInInfo.symbol} size="w-5 h-5" />
-                    <span className="text-xl font-extrabold text-slate-900">
+                    <span className="text-xl font-extrabold text-[#0B192C]">
                       {formattedReqIn} {tokenInInfo.symbol}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">Slippage Tolerance</span>
-                  <span className="text-xs font-semibold text-emerald-700">Maks. 0.5%</span>
+                  <span className="text-[10px] text-slate-400 block font-medium">Slippage Tolerance</span>
+                  <span className="text-xs font-bold text-emerald-600">Maks. 0.5%</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs font-mono">
+                <div className="space-y-0.5">
+                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Estimasi Gas Network</span>
+                  <span className="text-slate-800 font-bold">
+                    {isEstimatingGas ? "Menghitung..." : `~${estimatedGasEth} Sepolia ETH`}
+                  </span>
+                </div>
+                <div className="text-right space-y-0.5">
+                  <span className="text-slate-400 text-[10px] block uppercase font-sans">Saldo Gas Anda</span>
+                  <span
+                    className={`font-bold ${
+                      isGasSufficient ? "text-emerald-600" : "text-rose-600"
+                    }`}
+                  >
+                    {walletAddress ? `${parseFloat(ethBalance).toFixed(4)} ETH` : "—"}
+                  </span>
                 </div>
               </div>
 
               {walletAddress && !isBalanceSufficient && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs flex items-center justify-between">
                   <span>Saldo {tokenInInfo.symbol} Anda kurang dari jumlah yang ditagih!</span>
                   <button
                     onClick={() => setIsAssetModalOpen(true)}
@@ -510,108 +698,113 @@ function PaymentContent() {
                   </button>
                 </div>
               )}
+
+              {walletAddress && !isGasSufficient && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs flex items-center justify-between">
+                  <span>Saldo Sepolia ETH Anda tidak mencukupi untuk membayar gas!</span>
+                  <a
+                    href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-rose-900 font-bold ml-2 cursor-pointer flex-shrink-0"
+                  >
+                    Klaim Faucet ↗
+                  </a>
+                </div>
+              )}
             </div>
 
-            {/* Error Message */}
             {errorMsg && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-                {errorMsg}
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-700 text-xs leading-relaxed font-medium">
+                ⚠️ {errorMsg}
               </div>
             )}
 
-            {/* 2-Step Process Stepper */}
-            {walletAddress && status !== "SUCCESS" && (
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div
-                  className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                    status === "APPROVING"
-                      ? "bg-indigo-50 border-indigo-600 text-indigo-700 animate-pulse font-bold"
-                      : status === "SWAPPING"
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-700 font-medium"
-                      : "bg-slate-50 border-slate-200 text-slate-500"
-                  }`}
-                >
-                  <span className="block font-bold">1. Approve Allowance</span>
-                  <span className="text-[10px] text-slate-400">Izin transfer token</span>
-                </div>
-
-                <div
-                  className={`p-2.5 rounded-xl border text-xs text-center transition ${
-                    status === "SWAPPING"
-                      ? "bg-indigo-50 border-indigo-600 text-indigo-700 animate-pulse font-bold"
-                      : "bg-slate-50 border-slate-200 text-slate-500"
-                  }`}
-                >
-                  <span className="block font-bold">2. Eksekusi Swap & Bayar</span>
-                  <span className="text-[10px] text-slate-400">Finalisasi di kontrak</span>
-                </div>
-              </div>
+            {walletAddress && (
+              <PaymentTimeline
+                status={status}
+                isApprovalRequired={isApprovalRequired}
+                isApproved={isApproved}
+                isTampered={integrityState.isTampered}
+                isExpired={isExpired}
+                txHash={txHash}
+                approvalTxHash={approvalTxHash}
+              />
             )}
 
-            {/* Action Buttons */}
             {!walletAddress ? (
               <button
                 type="button"
                 onClick={connectAndValidateNetwork}
-                className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/25 transition transform active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-2xl bg-[#1951FC] hover:bg-blue-600 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition transform active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 <IconWallet className="w-4 h-4" />
                 <span>Hubungkan Wallet Sepolia untuk Membayar</span>
               </button>
             ) : status === "SUCCESS" ? (
-              <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-4 animate-fadeIn">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-300 text-center space-y-4 animate-fadeIn">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-md shadow-emerald-500/30">
                   <IconCheck className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Pembayaran Sukses Dikonfirmasi!</h3>
-                  <p className="text-xs text-emerald-800 mt-1">
-                    Swap dari {tokenInInfo.symbol} ke {tokenOutInfo.symbol} berhasil dieksekusi di Sepolia.
+                  <h3 className="text-lg font-bold text-[#0B192C]">Pembayaran Sukses Dikonfirmasi!</h3>
+                  <p className="text-xs text-emerald-700 mt-1">
+                    Swap dari {tokenInInfo.symbol} ke {tokenOutInfo.symbol} berhasil dieksekusi di
+                    Ethereum Sepolia.
                   </p>
                 </div>
 
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-left text-xs space-y-1.5 font-mono">
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-left text-xs space-y-1.5 font-mono text-slate-700">
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Tx Hash:</span>
+                    <span className="text-slate-400">Tx Hash:</span>
                     <a
                       href={`https://sepolia.etherscan.io/tx/${txHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-indigo-600 hover:underline truncate max-w-[200px]"
+                      className="text-blue-600 hover:underline truncate max-w-[200px]"
                     >
                       {txHash} ↗
                     </a>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Jumlah Terbayar:</span>
-                    <span className="text-slate-800 font-semibold">
+                    <span className="text-slate-400">Jumlah Terbayar:</span>
+                    <span className="text-slate-900 font-bold">
                       {formattedReqIn} {tokenInInfo.symbol}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500">Penerima Tagihan:</span>
-                    <span className="text-emerald-700 font-semibold">
+                    <span className="text-slate-400">Penerima Tagihan:</span>
+                    <span className="text-emerald-600 font-bold">
                       {amountOut} {tokenOutInfo.symbol}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsReceiptModalOpen(true)}
+                    className="py-2.5 rounded-xl bg-[#1951FC] hover:bg-blue-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <span>Struk Lengkap 🧾</span>
+                  </button>
+
                   <a
                     href={`https://sepolia.etherscan.io/tx/${txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition flex items-center justify-center gap-1.5 shadow-sm"
+                    className="py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs transition flex items-center justify-center gap-1.5 border border-slate-200"
                   >
-                    <span>Buka Sepolia Etherscan</span>
+                    <span>Buka Etherscan</span>
                     <IconExternalLink className="w-3 h-3" />
                   </a>
-                  <a
+
+                  <Link
                     href="/"
-                    className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition flex items-center justify-center"
+                    className="py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs transition flex items-center justify-center border border-slate-200"
                   >
                     Selesai
-                  </a>
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -620,11 +813,13 @@ function PaymentContent() {
                 onClick={handlePayment}
                 disabled={
                   isExpired ||
+                  integrityState.isTampered ||
                   !isBalanceSufficient ||
+                  !isGasSufficient ||
                   status === "APPROVING" ||
                   status === "SWAPPING"
                 }
-                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition transform active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-2xl bg-[#1951FC] hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition transform active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
               >
                 {status === "APPROVING" ? (
                   <>
@@ -652,11 +847,16 @@ function PaymentContent() {
         </div>
       </div>
 
-      {/* Asset / Faucet Modal */}
       <TokenBalancesModal
         isOpen={isAssetModalOpen}
         onClose={() => setIsAssetModalOpen(false)}
         walletAddress={walletAddress}
+      />
+
+      <TransactionReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        tx={receiptData}
       />
     </div>
   );
@@ -666,10 +866,10 @@ export default function PayPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center">
+        <div className="min-h-screen bg-[#030A22] text-white flex items-center justify-center">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-semibold text-slate-600">
+            <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-semibold text-[#CBE9FD]">
               Memuat Invoice Pembayaran...
             </span>
           </div>

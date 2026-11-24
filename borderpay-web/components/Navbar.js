@@ -2,7 +2,14 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { SEPOLIA_CHAIN_ID, TOKENS, ERC20_ABI } from "../constants/contracts";
-import { IconBorderPayLogo, IconWallet, IconCopy, IconCheck, TokenIcon } from "./Icons";
+import {
+  IconBorderPayLogo,
+  IconWallet,
+  IconCopy,
+  IconCheck,
+  TokenIcon,
+  IconQrCode,
+} from "./Icons";
 
 export default function Navbar({
   walletAddress,
@@ -10,6 +17,9 @@ export default function Navbar({
   activeTab = "terminal",
   onSelectTab,
   onOpenAssetModal,
+  onOpenScanner,
+  onOpenHistory,
+  onOpenGuide,
   currentUser,
   onOpenAuthModal,
   onLogout,
@@ -17,13 +27,26 @@ export default function Navbar({
   const [copied, setCopied] = useState(false);
   const [balances, setBalances] = useState({});
   const [currentChain, setCurrentChain] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
 
   const copyAddress = () => {
     if (!walletAddress) return;
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const switchToSepolia = async () => {
+    if (typeof window === "undefined" || !window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+      setCurrentChain(SEPOLIA_CHAIN_ID);
+    } catch (err) {
+      console.error("Switch chain error:", err);
+    }
   };
 
   useEffect(() => {
@@ -52,199 +75,228 @@ export default function Navbar({
 
     fetchQuickBalances();
     const interval = setInterval(fetchQuickBalances, 12000);
+
+    if (typeof window !== "undefined" && window.ethereum) {
+      const handleAccountsChanged = () => fetchQuickBalances();
+      const handleChainChanged = (chain) => {
+        setCurrentChain(chain);
+        fetchQuickBalances();
+      };
+      window.ethereum.on?.("accountsChanged", handleAccountsChanged);
+      window.ethereum.on?.("chainChanged", handleChainChanged);
+
+      return () => {
+        clearInterval(interval);
+        window.ethereum.removeListener?.("accountsChanged", handleAccountsChanged);
+        window.ethereum.removeListener?.("chainChanged", handleChainChanged);
+      };
+    }
+
     return () => clearInterval(interval);
   }, [walletAddress]);
 
   const isSepolia = currentChain.toLowerCase() === SEPOLIA_CHAIN_ID.toLowerCase();
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center gap-3">
-          <IconBorderPayLogo className="w-10 h-10" />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-slate-900">
-                BorderPay
-              </span>
-              <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                v2.0 QR
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 hidden sm:block">
-              Cross-Border Multi-Currency Payment Protocol
-            </p>
-          </div>
+    <header className="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-[#030a22]/80 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <IconBorderPayLogo className="w-8 h-8 drop-shadow-[0_0_12px_rgba(25,81,252,0.5)]" />
+          <span className="font-extrabold text-lg tracking-tight text-white">
+            BorderPay
+          </span>
         </div>
 
-        {/* Navigation Tabs */}
         {onSelectTab && (
-          <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+          <nav className="flex items-center p-1 rounded-xl bg-white/[0.04] border border-white/[0.08]">
             <button
               onClick={() => onSelectTab("terminal")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "terminal"
-                  ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-[#A9BEE4] hover:text-white"
               }`}
             >
-              Merchant POS
+              POS Kasir
             </button>
             <button
               onClick={() => onSelectTab("ledger")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "ledger"
-                  ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-[#A9BEE4] hover:text-white"
               }`}
             >
-              On-Chain Ledger
+              Ledger
             </button>
             <button
               onClick={() => onSelectTab("rates")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === "rates"
-                  ? "bg-white text-indigo-600 shadow-sm border border-slate-200/60"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-[#A9BEE4] hover:text-white"
               }`}
             >
-              Live Kurs Swap
+              Kurs Swap
             </button>
           </nav>
         )}
 
-        {/* Right Action & User Controls */}
-        <div className="flex items-center gap-2.5">
-          {/* Network Status Badge */}
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-slate-50 border border-slate-200 text-slate-700">
+        <div className="flex items-center gap-2">
+          {onOpenScanner && (
+            <button
+              type="button"
+              onClick={onOpenScanner}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-[#CBE9FD] text-xs font-semibold transition cursor-pointer"
+              title="Scan QR Tagihan"
+            >
+              <IconQrCode className="w-4 h-4 text-blue-400" />
+              <span className="hidden sm:inline text-xs">Scan</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs bg-white/[0.04] border border-white/[0.08] text-white">
             <span
               className={`w-2 h-2 rounded-full ${
                 walletAddress
                   ? isSepolia
-                    ? "bg-emerald-500 animate-pulse"
-                    : "bg-amber-500 animate-ping"
-                  : "bg-slate-400"
+                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                    : "bg-rose-400 animate-pulse"
+                  : "bg-slate-500"
               }`}
             />
-            <span className="font-medium text-[11px]">
-              {walletAddress ? (isSepolia ? "Sepolia Testnet" : "Wrong Chain") : "Sepolia"}
+            <span className="text-[11px] font-medium text-slate-300">
+              {walletAddress ? (
+                isSepolia ? (
+                  "Sepolia"
+                ) : (
+                  <button onClick={switchToSepolia} className="text-rose-400 underline cursor-pointer">
+                    Switch
+                  </button>
+                )
+              ) : (
+                "Sepolia"
+              )}
             </span>
           </div>
 
-          {/* Quick Token Balances Button */}
-          {walletAddress && onOpenAssetModal && (
-            <button
-              type="button"
-              onClick={onOpenAssetModal}
-              className="hidden sm:flex items-center gap-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs transition cursor-pointer text-slate-700"
-              title="Lihat Detail Saldo Token"
-            >
-              <div className="flex -space-x-1.5 items-center">
-                <TokenIcon symbol="mUSD" size="w-4 h-4" />
-                <TokenIcon symbol="mEUR" size="w-4 h-4" />
-                <TokenIcon symbol="mJPY" size="w-4 h-4" />
-              </div>
-              <span className="text-[11px] font-semibold text-slate-800">
-                {balances.mUSD !== undefined ? `${balances.mUSD} mUSD` : "Dompet"}
-              </span>
-            </button>
-          )}
-
-          {/* User Account / Profile Section */}
-          {currentUser ? (
+          {walletAddress ? (
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-900 transition cursor-pointer shadow-sm"
+                onClick={() => setShowWalletMenu(!showWalletMenu)}
+                className="flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-400/30 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition cursor-pointer"
               >
-                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[10px]">
-                  {currentUser.storeName ? currentUser.storeName[0].toUpperCase() : "M"}
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="font-mono text-xs">
+                  {currentUser?.storeName
+                    ? currentUser.storeName
+                    : `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
                 </span>
-                <span className="max-w-[110px] truncate">{currentUser.storeName}</span>
-                <span className="text-[10px] text-indigo-400">▼</span>
+                <span className="text-[10px] text-blue-300">▾</span>
               </button>
 
-              {/* Profile Dropdown */}
-              {showDropdown && (
-                <div
-                  className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-50 text-xs animate-fadeIn"
-                  onMouseLeave={() => setShowDropdown(false)}
-                >
-                  <div className="p-2 border-b border-slate-100">
-                    <p className="font-bold text-slate-900 truncate">{currentUser.storeName}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{currentUser.name}</p>
-                    <p className="text-[10px] font-mono text-slate-400 mt-1 truncate">
-                      {walletAddress}
-                    </p>
+              {showWalletMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowWalletMenu(false)}
+                  />
+                  <div
+                    className="absolute right-0 mt-2 w-56 bg-[#03195b]/95 border border-white/10 rounded-2xl shadow-2xl p-2 z-50 text-xs backdrop-blur-xl animate-fadeIn"
+                  >
+                    <div className="p-2 border-b border-white/10 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[11px] text-[#A9BEE4] truncate">
+                          {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+                        </span>
+                        <button
+                          onClick={copyAddress}
+                          className="text-slate-400 hover:text-white transition cursor-pointer"
+                        >
+                          {copied ? (
+                            <IconCheck className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <IconCopy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-300 pt-0.5">
+                        <span className="text-[#A9BEE4]">Saldo:</span>
+                        <span className="font-mono font-bold text-white">
+                          {balances.mUSD !== undefined ? `${balances.mUSD}` : "0"} mUSD
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setShowWalletMenu(false);
+                          onOpenAssetModal?.();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-white/10 transition cursor-pointer flex items-center gap-2"
+                      >
+                        <span>💳</span>
+                        <span>Saldo & Faucet</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowWalletMenu(false);
+                          onOpenHistory?.();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-white/10 transition cursor-pointer flex items-center gap-2"
+                      >
+                        <span>📋</span>
+                        <span>Riwayat Tagihan</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowWalletMenu(false);
+                          onOpenGuide?.();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-white/10 transition cursor-pointer flex items-center gap-2"
+                      >
+                        <span>🧭</span>
+                        <span>Panduan Web3</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowWalletMenu(false);
+                          onOpenAuthModal?.();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-slate-200 hover:bg-white/10 transition cursor-pointer flex items-center gap-2"
+                      >
+                        <span>🏪</span>
+                        <span>Profil Merchant</span>
+                      </button>
+                    </div>
+
+                    {currentUser && (
+                      <div className="pt-1 border-t border-white/10">
+                        <button
+                          onClick={() => {
+                            setShowWalletMenu(false);
+                            onLogout?.();
+                          }}
+                          className="w-full text-left px-3 py-1.5 rounded-xl text-rose-400 hover:bg-rose-950/40 transition cursor-pointer font-semibold"
+                        >
+                          Keluar Akun
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => {
-                      setShowDropdown(false);
-                      onOpenAuthModal();
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 transition"
-                  >
-                    ⚙️ Detail Profil Merchant
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDropdown(false);
-                      onOpenAssetModal();
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 transition"
-                  >
-                    💳 Dompet & Saldo Koin
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowDropdown(false);
-                      onLogout();
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 font-semibold transition"
-                  >
-                    🚪 Keluar (Logout)
-                  </button>
-                </div>
+                </>
               )}
             </div>
           ) : (
             <button
               type="button"
-              onClick={onOpenAuthModal}
-              className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-sm transition cursor-pointer"
-            >
-              <span>Masuk / Daftar</span>
-            </button>
-          )}
-
-          {/* Wallet Address Pill */}
-          {walletAddress ? (
-            <button
-              type="button"
-              onClick={copyAddress}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition"
-              title="Klik untuk salin alamat"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span>
-                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-              </span>
-              {copied ? (
-                <IconCheck className="w-3 h-3 text-emerald-600" />
-              ) : (
-                <IconCopy className="w-3 h-3 text-slate-400" />
-              )}
-            </button>
-          ) : (
-            <button
-              type="button"
               onClick={onConnectWallet}
-              className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-2 rounded-xl transition cursor-pointer"
+              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl shadow-md transition cursor-pointer"
             >
               <IconWallet className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Hubungkan Wallet</span>
+              <span>Connect</span>
             </button>
           )}
         </div>
