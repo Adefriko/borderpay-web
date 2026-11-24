@@ -81,6 +81,9 @@ export default function Home() {
           const found = TOKENS.find((t) => t.symbol === parsed.defaultToken);
           if (found) setTokenOut(found.address);
         }
+        if (typeof parsed.reducedMotion === "boolean") {
+          document.documentElement.dataset.reducedMotion = parsed.reducedMotion ? "true" : "false";
+        }
       }
     } catch {
       // Ignore malformed prefs
@@ -516,8 +519,9 @@ export default function Home() {
         onOpenGuide={() => setIsGuideOpen(true)}
       />
 
-      {/* Main Content Viewport */}
+      {/* Main Content Viewport with smooth view transition on tab switch */}
       <main className="flex-1 max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div key={activeTab} className="animate-view-enter">
         {activeTab === "overview" || activeTab === "dashboard" ? (
           <OverviewView
             walletAddress={walletAddress}
@@ -529,6 +533,11 @@ export default function Home() {
             onOpenAssetModal={() => setIsAssetModalOpen(true)}
             onOpenGuide={() => setIsGuideOpen(true)}
             onOpenReceipt={(tx) => setSelectedTx(tx)}
+            onQuickCreateInvoice={(sym) => {
+              const found = TOKENS.find((t) => t.symbol === sym);
+              if (found) setTokenOut(found.address);
+              setActiveTab("terminal");
+            }}
           />
         ) : activeTab === "terminal" || activeTab === "create" ? (
           <CreateQrView
@@ -588,8 +597,14 @@ export default function Home() {
             onOpenAssetModal={() => setIsAssetModalOpen(true)}
             onOpenGuide={() => setIsGuideOpen(true)}
             onOpenReceipt={(tx) => setSelectedTx(tx)}
+            onQuickCreateInvoice={(sym) => {
+              const found = TOKENS.find((t) => t.symbol === sym);
+              if (found) setTokenOut(found.address);
+              setActiveTab("terminal");
+            }}
           />
         )}
+        </div>
       </main>
 
       {/* Global Modals */}

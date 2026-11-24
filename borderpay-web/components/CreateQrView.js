@@ -9,7 +9,6 @@ import {
   IconCheck,
   IconDownload,
   IconExternalLink,
-  IconClock,
   IconBorderPayMark,
 } from "./Icons";
 import { useToast } from "./ToastContext";
@@ -63,6 +62,13 @@ export default function CreateQrView({
   };
 
   const isExpired = timeRemaining <= 0 && paymentLink;
+  const totalSec = Math.max(1, (expiryMinutes || 15) * 60);
+  const progressRatio = isExpired
+    ? 0
+    : timeRemaining > 0
+    ? Math.min(1, timeRemaining / totalSec)
+    : 0.96;
+  const ringCircumference = 37.7;
 
   return (
     <div className="space-y-6 text-[#0B192C]">
@@ -220,7 +226,7 @@ export default function CreateQrView({
         </div>
 
         {/* Right Column: Vibrant Royal Blue Preview Card (5 Cols, Matching Figma Image 1) */}
-        <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 bg-gradient-to-b from-[#1951FC] via-[#1444E0] to-[#0B2CB1] text-white shadow-xl shadow-blue-900/20 space-y-5 relative overflow-hidden">
+        <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 bg-gradient-to-b from-[#1951FC] via-[#1444E0] to-[#0B2CB1] text-white shadow-xl shadow-blue-900/20 space-y-5 relative overflow-hidden glass-sheen-hover">
           
           {/* Card Header */}
           <div className="flex items-center justify-between">
@@ -241,7 +247,10 @@ export default function CreateQrView({
 
           {/* Centered White Rounded QR Container */}
           <div className="flex justify-center py-2">
-            <div className="p-4 rounded-3xl bg-white shadow-lg shadow-black/10 flex items-center justify-center">
+            <div
+              key={orderIdDisplay || "preview"}
+              className="p-4 rounded-3xl bg-white shadow-lg shadow-black/10 flex items-center justify-center animate-qr-reveal"
+            >
               <QRCodeSVG
                 id="borderpay-qr-code"
                 value={paymentLink || "https://borderpay.finance/preview"}
@@ -285,7 +294,28 @@ export default function CreateQrView({
           {/* Countdown Clock Ring Pill */}
           <div className="flex items-center justify-center gap-2 py-1">
             <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs text-white">
-              <IconClock className="w-3.5 h-3.5 text-blue-300" />
+              <svg className="w-4 h-4 -rotate-90 shrink-0" viewBox="0 0 16 16" aria-hidden="true">
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="6"
+                  fill="none"
+                  stroke="rgba(191, 219, 254, 0.25)"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx="8"
+                  cy="8"
+                  r="6"
+                  fill="none"
+                  stroke="#93c5fd"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray={ringCircumference}
+                  strokeDashoffset={ringCircumference * (1 - progressRatio)}
+                  className="transition-all duration-700 ease-out"
+                />
+              </svg>
               <span className="text-[10px] uppercase font-bold text-blue-200 tracking-wider">
                 BERLAKU SELAMA
               </span>

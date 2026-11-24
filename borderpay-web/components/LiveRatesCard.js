@@ -26,6 +26,7 @@ export default function LiveRatesCard() {
   });
   const [lastUpdated, setLastUpdated] = useState("Baru saja");
   const [showStatePreviews, setShowStatePreviews] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
 
   const fetchRates = useCallback(async () => {
     setLoading(true);
@@ -97,6 +98,7 @@ export default function LiveRatesCard() {
     const temp = simTokenIn;
     setSimTokenIn(simTokenOut);
     setSimTokenOut(temp);
+    setIsFlipped((f) => !f);
   };
 
   const handleSelectPair = (symIn, symOut) => {
@@ -178,7 +180,8 @@ export default function LiveRatesCard() {
             <button
               type="button"
               onClick={handleFlip}
-              className="btn-press w-11 h-11 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30 transition transform hover:rotate-180 cursor-pointer"
+              style={{ transform: isFlipped ? "rotate(180deg)" : "rotate(0deg)" }}
+              className="btn-press w-11 h-11 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30 transition-transform duration-300 ease-out cursor-pointer"
               title="Tukar Posisi Token"
             >
               <IconSwap className="w-5 h-5" />
@@ -217,7 +220,10 @@ export default function LiveRatesCard() {
 
         {/* Centered Conversion Navy Pill */}
         <div className="flex flex-col items-center justify-center space-y-2">
-          <div className="px-5 py-2.5 rounded-xl bg-[#0B192C] text-white font-extrabold text-sm tracking-wide shadow-sm flex items-center gap-2">
+          <div
+            key={`${tokenInInfo.symbol}-${tokenOutInfo.symbol}-${calcResult?.out}`}
+            className="px-5 py-2.5 rounded-xl bg-[#0B192C] text-white font-extrabold text-sm tracking-wide shadow-sm flex items-center gap-2 animate-pop"
+          >
             <span>{simAmount || "0"} {tokenInInfo.symbol}</span>
             <span>→</span>
             <span>{calcResult?.out || "0.0000"} {tokenOutInfo.symbol}</span>
@@ -271,7 +277,7 @@ export default function LiveRatesCard() {
                 key={`${pair.in}-${pair.out}`}
                 type="button"
                 onClick={() => handleSelectPair(pair.in, pair.out)}
-                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
+                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer interactive-tile ${
                   isSelected
                     ? "bg-gradient-to-br from-blue-500/15 via-blue-500/10 to-white/90 border-blue-500 shadow-md ring-1 ring-blue-500/30"
                     : "glass-panel hover:bg-white/90"

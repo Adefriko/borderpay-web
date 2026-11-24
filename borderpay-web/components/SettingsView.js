@@ -75,6 +75,7 @@ export default function SettingsView({
   const handleSavePrefs = () => {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(prefs));
+      document.documentElement.dataset.reducedMotion = prefs.reducedMotion ? "true" : "false";
       if (onDefaultTokenChange) onDefaultTokenChange(prefs.defaultToken);
 
       if (walletAddress || currentUser?.address) {
@@ -99,6 +100,7 @@ export default function SettingsView({
   const handleResetPrefs = () => {
     setPrefs(DEFAULT_PREFS);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(DEFAULT_PREFS));
+    document.documentElement.dataset.reducedMotion = DEFAULT_PREFS.reducedMotion ? "true" : "false";
     if (onDefaultTokenChange) onDefaultTokenChange(DEFAULT_PREFS.defaultToken);
     toast.info("Direset ke Default", "Semua preferensi dikembalikan ke pengaturan awal.");
   };
@@ -192,7 +194,10 @@ export default function SettingsView({
                 </div>
                 <ToggleSwitch
                   checked={prefs.reducedMotion}
-                  onChange={(val) => setPrefs((p) => ({ ...p, reducedMotion: val }))}
+                  onChange={(val) => {
+                    setPrefs((p) => ({ ...p, reducedMotion: val }));
+                    document.documentElement.dataset.reducedMotion = val ? "true" : "false";
+                  }}
                 />
               </div>
 

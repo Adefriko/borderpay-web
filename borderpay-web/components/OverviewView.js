@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { TOKENS } from "../constants/contracts";
 import { getLocalInvoices } from "../lib/invoiceStore";
 import {
@@ -18,6 +19,12 @@ const SIMULATED_RATES = {
   "mJPY->mEUR": 0.006135,
 };
 
+const HERO_NODES = [
+  { symbol: "mUSD", mark: "$", quoteTo: "mEUR", badgeClass: "bg-[#1951FC]" },
+  { symbol: "mEUR", mark: "€", quoteTo: "mUSD", badgeClass: "bg-indigo-600" },
+  { symbol: "mJPY", mark: "¥", quoteTo: "mUSD", badgeClass: "bg-teal-600" },
+];
+
 export default function OverviewView({
   walletAddress = "",
   tokenBalances = { mUSD: "10,000.00", mEUR: "10,000.00", mJPY: "1,000,000" },
@@ -28,6 +35,7 @@ export default function OverviewView({
   onOpenAssetModal,
   onOpenGuide,
   onOpenReceipt,
+  onQuickCreateInvoice,
 }) {
   const toast = useToast();
   const [copiedHeroWallet, setCopiedHeroWallet] = useState(false);
@@ -35,6 +43,9 @@ export default function OverviewView({
   const [swapInAmount, setSwapInAmount] = useState("1000");
   const [swapInSymbol, setSwapInSymbol] = useState("mUSD");
   const [swapOutSymbol, setSwapOutSymbol] = useState("mEUR");
+  const [swapRotated, setSwapRotated] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [selectedHeroToken, setSelectedHeroToken] = useState("mUSD");
 
   const displayAddr = walletAddress || "0x71C7656EC7ab88b098defB751B7401B5f6d89A3F";
   const shortAddr = `${displayAddr.slice(0, 6)}...${displayAddr.slice(-4)}`;
@@ -60,7 +71,23 @@ export default function OverviewView({
   const handleFlipSwap = () => {
     setSwapInSymbol(swapOutSymbol);
     setSwapOutSymbol(swapInSymbol);
+    setSwapRotated((r) => !r);
   };
+
+  const handleTorusPointerMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const nx = (e.clientX - rect.left) / rect.width - 0.5;
+    const ny = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: -ny * 14, y: nx * 16 });
+  };
+
+  const resetTorusTilt = () => setTilt({ x: 0, y: 0 });
+
+  const activeHeroNode =
+    HERO_NODES.find((node) => node.symbol === selectedHeroToken) || HERO_NODES[0];
+  const heroRate =
+    SIMULATED_RATES[`${activeHeroNode.symbol}->${activeHeroNode.quoteTo}`] || 1;
+  const heroBalance = tokenBalances?.[activeHeroNode.symbol] || "0.00";
 
   // Real local invoice summary stats combined with on-chain count
   const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
@@ -96,10 +123,10 @@ export default function OverviewView({
       </div>
 
       {/* 2. Top Hero Section (3-Column Translucent Frosted Glass Grid matching Figma Image 2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch stagger-1">
         
         {/* Left Column: Wallet Status Card */}
-        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean flex flex-col justify-between space-y-5 text-white">
+        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-5 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold uppercase text-white/75 tracking-wider">
@@ -165,95 +192,100 @@ export default function OverviewView({
           </div>
         </div>
 
-        {/* Center Column: Pure Vector 3D Glass Torus Sculpture (Single Clean Token Badges) */}
-        <div className="lg:col-span-4 rounded-3xl overflow-hidden shadow-2xl border border-white/45 relative flex items-center justify-center min-h-[240px] bg-[radial-gradient(circle_at_50%_38%,#14507a_0%,#09253f_62%,#04111f_100%)] group">
-          <div className="absolute bottom-3 w-48 h-8 rounded-full bg-cyan-400/25 blur-xl pointer-events-none" />
+        {/* Center Column: Interactive 3D Liquid-Glass Settlement Hub */}
+        <div
+          onMouseMove={handleTorusPointerMove}
+          onMouseLeave={resetTorusTilt}
+          className="lg:col-span-4 rounded-3xl overflow-hidden shadow-2xl border border-white/45 relative min-h-[270px] bg-[#04172b] glass-sheen-hover group"
+          style={{ perspective: "900px" }}
+        >
+          <Image
+            src="/hero-liquidity-3d.jpg"
+            alt="BorderPay 3D Liquid Glass Torus"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 33vw"
+            draggable={false}
+            className="object-cover object-center select-none pointer-events-none transition-transform duration-300 ease-out"
+            style={{
+              transform: `scale(1.07) rotateX(${tilt.x * 0.7}deg) rotateY(${tilt.y * 0.7}deg)`,
+            }}
+          />
 
-          <svg
-            className="w-56 h-56 drop-shadow-[0_18px_36px_rgba(14,165,233,0.45)] animate-float select-none"
-            viewBox="0 0 240 240"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M120 34C72.5 34 34 72.5 34 120C34 167.5 72.5 206 120 206C167.5 206 206 167.5 206 120C206 72.5 167.5 34 120 34ZM120 174C90.2 174 66 149.8 66 120C66 90.2 90.2 66 120 66C149.8 66 174 90.2 174 120C174 149.8 149.8 174 120 174Z"
-              fill="url(#torus-outer-grad)"
-            />
-            <path
-              d="M46 118C52 84 86 64 122 86C158 108 192 92 194 120C190 156 156 174 118 152C82 130 50 144 46 118Z"
-              fill="url(#torus-ribbon-grad)"
-              opacity="0.92"
-            />
-            <path
-              d="M66 66C84 48 112 42 138 48"
-              stroke="rgba(224,242,254,0.85)"
-              strokeWidth="4.5"
-              strokeLinecap="round"
-            />
-            <path
-              d="M174 172C154 192 126 198 98 190"
-              stroke="rgba(56,189,248,0.75)"
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-            <path
-              d="M64 114C78 96 104 94 126 106"
-              stroke="rgba(255,255,255,0.7)"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <ellipse cx="120" cy="214" rx="64" ry="8" fill="url(#floor-glow)" />
-            <defs>
-              <linearGradient id="torus-outer-grad" x1="34" y1="34" x2="206" y2="206" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#60a5fa" />
-                <stop offset="0.35" stopColor="#1951FC" />
-                <stop offset="0.7" stopColor="#0284c7" />
-                <stop offset="1" stopColor="#072b6b" />
-              </linearGradient>
-              <linearGradient id="torus-ribbon-grad" x1="46" y1="90" x2="194" y2="155" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#38bdf8" />
-                <stop offset="0.5" stopColor="#1d4ed8" />
-                <stop offset="1" stopColor="#22d3ee" />
-              </linearGradient>
-              <radialGradient id="floor-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(120 214) scale(64 8)">
-                <stop stopColor="#38bdf8" stopOpacity="0.6" />
-                <stop offset="1" stopColor="#38bdf8" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-          </svg>
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(4, 21, 41, 0.28) 0%, rgba(4, 21, 41, 0.08) 46%, rgba(3, 16, 33, 0.86) 100%)",
+            }}
+          />
 
-          <button
-            type="button"
-            onClick={onOpenAssetModal}
-            className="btn-press absolute top-5 right-5 px-3 py-1 rounded-full bg-[#1951FC]/90 backdrop-blur-md text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border border-white/45 cursor-pointer animate-float"
-          >
-            <span>mUSD</span>
-            <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px]">$</span>
-          </button>
+          {/* Interactive Currency Nodes cleanly positioned inside safe inset bounds */}
+          {HERO_NODES.map((node, index) => {
+            const isSelected = activeHeroNode.symbol === node.symbol;
+            const posClass =
+              index === 0
+                ? "top-3.5 left-3.5"
+                : index === 1
+                ? "top-3.5 right-3.5"
+                : "bottom-[78px] right-3.5";
+            return (
+              <button
+                key={node.symbol}
+                type="button"
+                onClick={() => setSelectedHeroToken(node.symbol)}
+                aria-pressed={isSelected}
+                className={`btn-press absolute ${posClass} px-3 py-1 rounded-full backdrop-blur-md text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border transition-all duration-200 cursor-pointer ${
+                  node.badgeClass
+                } ${
+                  isSelected
+                    ? "border-white ring-2 ring-white/55 scale-105 opacity-100"
+                    : "border-white/40 opacity-85 hover:opacity-100 hover:scale-105"
+                }`}
+              >
+                <span>{node.symbol}</span>
+                <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px]">
+                  {node.mark}
+                </span>
+              </button>
+            );
+          })}
 
-          <button
-            type="button"
-            onClick={onOpenAssetModal}
-            className="btn-press absolute bottom-14 left-5 px-3 py-1 rounded-full bg-teal-500/90 backdrop-blur-md text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border border-white/45 cursor-pointer animate-float"
-            style={{ animationDelay: "0.7s" }}
-          >
-            <span>mJPY</span>
-            <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px]">¥</span>
-          </button>
+          {/* Interactive Settlement Core HUD */}
+          <div className="absolute bottom-3 inset-x-3 p-3 rounded-2xl bg-[#051d36]/80 backdrop-blur-xl border border-white/25 flex items-center justify-between gap-2.5 shadow-xl">
+            <button
+              type="button"
+              onClick={onOpenAssetModal}
+              className="text-left min-w-0 group/bal cursor-pointer"
+              title="Lihat Detail Saldo Token"
+            >
+              <span className="text-[10px] font-bold text-sky-200/90 block truncate group-hover/bal:text-white transition-colors">
+                Saldo {activeHeroNode.symbol} · 1 = {heroRate} {activeHeroNode.quoteTo}
+              </span>
+              <span
+                key={activeHeroNode.symbol}
+                className="text-sm sm:text-base font-extrabold text-white tracking-tight block truncate animate-pop"
+              >
+                {heroBalance} <span className="text-xs font-bold text-sky-300">{activeHeroNode.symbol}</span>
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={onOpenAssetModal}
-            className="btn-press absolute bottom-4 left-9 px-3 py-1 rounded-full bg-indigo-600/90 backdrop-blur-md text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border border-white/45 cursor-pointer animate-float"
-            style={{ animationDelay: "1.4s" }}
-          >
-            <span>mEUR</span>
-            <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px]">€</span>
-          </button>
+            <button
+              type="button"
+              onClick={() =>
+                onQuickCreateInvoice
+                  ? onQuickCreateInvoice(activeHeroNode.symbol)
+                  : onSelectTab("terminal")
+              }
+              className="btn-press shrink-0 px-3.5 py-2 rounded-xl bg-[#1951FC] hover:bg-blue-500 text-white text-xs font-extrabold shadow-md shadow-blue-950/40 border border-white/25 cursor-pointer transition-colors"
+            >
+              Buat QR {activeHeroNode.symbol} →
+            </button>
+          </div>
         </div>
 
         {/* Right Column: Aktivitas Terbaru Card (Wired to Live History + Receipt) */}
-        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean flex flex-col justify-between space-y-4 text-white">
+        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/25">
               <h3 className="font-extrabold text-sm text-white">Aktivitas Terbaru</h3>
@@ -312,7 +344,7 @@ export default function OverviewView({
       </div>
 
       {/* 3. Middle Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-2">
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -396,7 +428,7 @@ export default function OverviewView({
             </div>
 
             <div className="pt-2">
-              <svg className="w-full h-24 overflow-visible" viewBox="0 0 280 80">
+              <svg key={activeChartFilter} className="w-full h-24 overflow-visible" viewBox="0 0 280 80">
                 <defs>
                   <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
                     <stop stopColor="#1951FC" stopOpacity="0.22" />
@@ -408,21 +440,34 @@ export default function OverviewView({
                 <text x="0" y="18" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">20</text>
                 <text x="0" y="48" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">10</text>
                 <path
-                  d="M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25 L 270 75 L 20 75 Z"
+                  d={
+                    activeChartFilter === "7d"
+                      ? "M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25 L 270 75 L 20 75 Z"
+                      : activeChartFilter === "30d"
+                      ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18 L 270 75 L 20 75 Z"
+                      : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14 L 270 75 L 20 75 Z"
+                  }
                   fill="url(#chart-grad)"
                 />
                 <path
-                  d="M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25"
+                  d={
+                    activeChartFilter === "7d"
+                      ? "M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25"
+                      : activeChartFilter === "30d"
+                      ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18"
+                      : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14"
+                  }
                   fill="none"
                   stroke="#1951FC"
                   strokeWidth="2.5"
                   strokeLinecap="round"
+                  className="animate-chart-draw"
                 />
-                <circle cx="20" cy="60" r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" />
-                <circle cx="90" cy="52" r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" />
-                <circle cx="160" cy="35" r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" />
-                <circle cx="225" cy="58" r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" />
-                <circle cx="270" cy="25" r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" />
+                <circle cx="20" cy={activeChartFilter === "7d" ? 60 : activeChartFilter === "30d" ? 55 : 64} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
+                <circle cx="90" cy={activeChartFilter === "7d" ? 52 : activeChartFilter === "30d" ? 44 : 38} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
+                <circle cx="160" cy={activeChartFilter === "7d" ? 35 : activeChartFilter === "30d" ? 22 : 28} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
+                <circle cx="225" cy={activeChartFilter === "7d" ? 58 : activeChartFilter === "30d" ? 42 : 32} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
+                <circle cx="270" cy={activeChartFilter === "7d" ? 25 : activeChartFilter === "30d" ? 18 : 14} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
               </svg>
 
               <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase mt-1 px-1">

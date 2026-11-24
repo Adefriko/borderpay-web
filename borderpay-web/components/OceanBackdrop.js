@@ -11,10 +11,10 @@ export default function OceanBackdrop({ variant = "ocean" }) {
       {variant === "ocean" ? (
         <>
           <div
-            className="absolute top-0 inset-x-0 h-[470px] w-full"
+            className="absolute top-0 inset-x-0 h-[560px] w-full"
             style={{
               background:
-                "linear-gradient(180deg, #0b4c69 0%, #157393 22%, #2b97b7 48%, #5cbcd3 72%, #b5e4ef 89%, #eef4f8 100%)",
+                "linear-gradient(180deg, #0b4c69 0%, #157393 26%, #268fb0 52%, #4fb4cd 74%, #a6dfec 90%, #eef4f8 100%)",
             }}
           />
 

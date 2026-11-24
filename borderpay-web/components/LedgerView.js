@@ -316,7 +316,10 @@ export default function LedgerView({
         </div>
 
         {/* Right Detail Card (Matching Figma Image 5 Flyout) */}
-        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-panel space-y-5">
+        <div
+          key={activeTx?.txHash || "empty"}
+          className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-panel space-y-5 animate-slide-right"
+        >
           {activeTx ? (
             <>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
