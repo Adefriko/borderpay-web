@@ -136,13 +136,13 @@ export default function LiveRatesCard() {
       </div>
 
       {/* Main Simulator Card (Matching Figma Image 4) */}
-      <div className="rounded-3xl p-6 sm:p-8 bg-white border border-slate-200/90 shadow-sm space-y-6 relative overflow-hidden">
+      <div className="rounded-3xl p-6 sm:p-8 glass-panel space-y-6 relative overflow-hidden">
         
         {/* Converter Inputs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4">
           {/* ANDA BAYAR */}
-          <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
-            <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider block">
+          <div className="p-5 rounded-2xl glass-sub-card space-y-2">
+            <span className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider block">
               ANDA BAYAR
             </span>
             <div className="flex items-center justify-between gap-3">
@@ -153,7 +153,7 @@ export default function LiveRatesCard() {
                 placeholder="100"
                 className="w-full text-2xl sm:text-3xl font-extrabold text-[#0B192C] bg-transparent focus:outline-none"
               />
-              <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+              <div className="flex items-center gap-2 bg-white/90 border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
                 <TokenIcon symbol={tokenInInfo.symbol} size="w-5 h-5" />
                 <select
                   value={simTokenIn}
@@ -168,7 +168,7 @@ export default function LiveRatesCard() {
                 </select>
               </div>
             </div>
-            <span className="text-[11px] text-slate-400 font-medium block">
+            <span className="text-[11px] text-slate-500 font-medium block">
               {tokenInInfo.symbol} — {tokenInInfo.name}
             </span>
           </div>
@@ -186,15 +186,15 @@ export default function LiveRatesCard() {
           </div>
 
           {/* DITERIMA (ESTIMASI) */}
-          <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
-            <span className="text-[11px] font-extrabold uppercase text-slate-400 tracking-wider block">
+          <div className="p-5 rounded-2xl glass-sub-card space-y-2">
+            <span className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider block">
               DITERIMA (ESTIMASI)
             </span>
             <div className="flex items-center justify-between gap-3">
               <div className="text-2xl sm:text-3xl font-extrabold text-[#0B192C]">
                 {calcResult?.out || "0.0000"}
               </div>
-              <div className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+              <div className="flex items-center gap-2 bg-white/90 border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
                 <TokenIcon symbol={tokenOutInfo.symbol} size="w-5 h-5" />
                 <select
                   value={simTokenOut}
@@ -209,7 +209,7 @@ export default function LiveRatesCard() {
                 </select>
               </div>
             </div>
-            <span className="text-[11px] text-slate-400 font-medium block">
+            <span className="text-[11px] text-slate-500 font-medium block">
               {tokenOutInfo.symbol} — {tokenOutInfo.name}
             </span>
           </div>
@@ -273,8 +273,8 @@ export default function LiveRatesCard() {
                 onClick={() => handleSelectPair(pair.in, pair.out)}
                 className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
                   isSelected
-                    ? "bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-white border-blue-500 shadow-xs ring-1 ring-blue-500/30"
-                    : "bg-white border-slate-200/80 hover:bg-slate-50"
+                    ? "bg-gradient-to-br from-blue-500/15 via-blue-500/10 to-white/90 border-blue-500 shadow-md ring-1 ring-blue-500/30"
+                    : "glass-panel hover:bg-white/90"
                 }`}
               >
                 <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 mb-1">

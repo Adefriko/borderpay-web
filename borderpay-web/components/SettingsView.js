@@ -33,7 +33,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-white border border-slate-200/80 rounded-2xl shadow-2xs">
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5 glass-panel rounded-2xl shadow-2xs">
         {[
           { id: "tampilan", label: "Tampilan" },
           { id: "notifikasi", label: "Notifikasi" },
@@ -59,7 +59,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
       {/* Content based on sub-tab */}
       {activeSubTab === "tampilan" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+          <div className="p-6 rounded-3xl glass-panel space-y-4">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Tema Visual Antarmuka</h3>
             <p className="text-xs text-slate-500">
               Pilih gaya visual dashboard BorderPay.
@@ -90,17 +90,17 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+          <div className="p-6 rounded-3xl glass-panel space-y-4">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Efek & Micro-Interactions</h3>
             <p className="text-xs text-slate-500">
               Animasi tactile tombol, feedback QR scanner, dan glow refractive.
             </p>
             <div className="space-y-3">
-              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+              <label className="flex items-center justify-between p-3 rounded-xl glass-sub-card cursor-pointer">
                 <span className="text-xs font-bold text-slate-700">Animasi Smooth Float</span>
                 <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 rounded" />
               </label>
-              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+              <label className="flex items-center justify-between p-3 rounded-xl glass-sub-card cursor-pointer">
                 <span className="text-xs font-bold text-slate-700">Suara Konfirmasi Transaksi</span>
                 <input
                   type="checkbox"
@@ -115,13 +115,13 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
       )}
 
       {activeSubTab === "notifikasi" && (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4 max-w-xl">
+        <div className="p-6 rounded-3xl glass-panel space-y-4 max-w-xl">
           <h3 className="font-extrabold text-sm text-[#0B192C]">Preferensi Notifikasi On-Chain</h3>
           <p className="text-xs text-slate-500">
             Dapatkan peringatan instan saat transaksi blockchain berhasil diselesaikan.
           </p>
           <div className="space-y-3">
-            <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+            <label className="flex items-center justify-between p-3 rounded-xl glass-sub-card cursor-pointer">
               <div>
                 <span className="text-xs font-bold text-slate-800 block">Notifikasi Pembayaran Diterima</span>
                 <span className="text-[11px] text-slate-500">Event PaymentProcessed pada smart contract</span>
@@ -133,7 +133,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
                 className="w-4 h-4 text-blue-600 rounded"
               />
             </label>
-            <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+            <label className="flex items-center justify-between p-3 rounded-xl glass-sub-card cursor-pointer">
               <div>
                 <span className="text-xs font-bold text-slate-800 block">Peringatan Invoice Kedaluwarsa</span>
                 <span className="text-[11px] text-slate-500">Countdown timer tagihan lokal</span>
@@ -145,7 +145,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
       )}
 
       {activeSubTab === "token" && (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4 max-w-2xl">
+        <div className="p-6 rounded-3xl glass-panel space-y-4 max-w-2xl">
           <h3 className="font-extrabold text-sm text-[#0B192C]">Valuta & Token Settlement Utama</h3>
           <p className="text-xs text-slate-500">
             Token standar yang dipilih otomatis saat Anda membuat invoice QR baru.
@@ -177,7 +177,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
       )}
 
       {activeSubTab === "profil" && (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4 max-w-xl">
+        <div className="p-6 rounded-3xl glass-panel space-y-4 max-w-xl">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-extrabold text-sm text-[#0B192C]">Profil Merchant Terdaftar</h3>
@@ -192,7 +192,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
             </button>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+          <div className="p-4 rounded-xl glass-sub-card space-y-2 text-xs">
             <div className="flex justify-between">
               <span className="text-slate-500 font-medium">Nama Toko:</span>
               <span className="font-bold text-slate-800">{currentUser?.storeName || "Toko Kopi Nusantara"}</span>
@@ -210,7 +210,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
       )}
 
       {activeSubTab === "sepolia" && (
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+        <div className="p-6 rounded-3xl glass-panel space-y-4">
           <div>
             <h3 className="font-extrabold text-sm text-[#0B192C]">Kontrak Smart Sepolia Testnet</h3>
             <p className="text-xs text-slate-500">
@@ -219,7 +219,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
           </div>
 
           <div className="space-y-3 text-xs font-mono">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl glass-sub-card flex items-center justify-between">
               <div>
                 <span className="text-slate-400 text-[10px] block font-sans font-bold">GATEWAY (CoinSwapPayment)</span>
                 <span className="font-bold text-slate-800">{CONTRACT_ADDRESSES.CoinSwapPayment}</span>
@@ -238,7 +238,7 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
             </div>
 
             {TOKENS.map((t) => (
-              <div key={t.symbol} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div key={t.symbol} className="p-3.5 rounded-xl glass-sub-card flex items-center justify-between">
                 <div>
                   <span className="text-slate-400 text-[10px] block font-sans font-bold">TOKEN {t.symbol} ({t.name})</span>
                   <span className="text-slate-700">{t.address}</span>

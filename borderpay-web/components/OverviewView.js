@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
 import {
   TokenIcon,
   IconCopy,
@@ -45,34 +44,32 @@ export default function OverviewView({
   return (
     <div className="space-y-6 text-[#0B192C]">
       {/* 1. Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] tracking-tight drop-shadow-2xs">
             Overview Panel
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-700/80 font-medium mt-0.5">
             Kelola invoice QR, token simulasi, dan aktivitas blockchain dalam satu antarmuka terpadu.
           </p>
         </div>
-        <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+        <span className="text-[10px] font-extrabold uppercase text-slate-600/70 tracking-wider">
           TERAKHIR DIPERBARUI 14:32 WIB
         </span>
       </div>
 
-      {/* 2. Top Hero Section (3-Column Grid matching Figma Image 2) */}
+      {/* 2. Top Hero Section (3-Column Frosted Glass Grid matching Figma Image 2) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         
-        {/* Left Column: Wallet Status Card (4 or 5 Cols) */}
-        <div className="lg:col-span-4 p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4">
+        {/* Left Column: Wallet Status Card (Frosted Glass over Turquoise) */}
+        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-panel-hero flex flex-col justify-between space-y-4">
           <div className="space-y-3">
             {/* Top row */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-                  WALLET TERHUBUNG
-                </span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-extrabold border border-emerald-200 flex items-center gap-1">
+              <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">
+                WALLET TERHUBUNG
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 text-[10px] font-extrabold border border-emerald-400/40 flex items-center gap-1 shadow-2xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>ACTIVE</span>
               </span>
@@ -86,7 +83,7 @@ export default function OverviewView({
               <button
                 type="button"
                 onClick={copyAddress}
-                className="text-slate-400 hover:text-blue-600 transition cursor-pointer"
+                className="text-slate-500 hover:text-blue-600 transition cursor-pointer"
                 title="Salin Alamat"
               >
                 {copiedHeroWallet ? (
@@ -99,89 +96,76 @@ export default function OverviewView({
 
             {/* Saldo Test ETH */}
             <div className="pt-2">
-              <span className="text-[11px] text-slate-400 font-medium block">Saldo Test ETH</span>
+              <span className="text-[11px] text-slate-500 font-medium block">Saldo Test ETH</span>
               <div className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] tracking-tight">
-                {ethBalance} <span className="text-sm font-bold text-slate-400">ETH</span>
+                {ethBalance} <span className="text-sm font-bold text-slate-500">ETH</span>
               </div>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-[10px] text-slate-500/80 mt-0.5">
                 *Test ETH is gas only. Mock tokens in simulation values.
               </p>
             </div>
           </div>
 
-          {/* 3 Action Buttons */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100">
+          {/* 3 Translucent Action Buttons */}
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/50">
             <button
               type="button"
               onClick={() => onSelectTab("terminal")}
-              className="btn-press py-2 px-2 rounded-xl bg-blue-50/70 hover:bg-blue-100/70 text-blue-700 text-xs font-bold transition text-center cursor-pointer"
+              className="btn-press glass-button py-2.5 px-2 rounded-xl text-slate-800 text-xs font-bold text-center cursor-pointer shadow-2xs"
             >
               Buat QR
             </button>
             <button
               type="button"
               onClick={onOpenScanner}
-              className="btn-press py-2 px-2 rounded-xl bg-blue-50/70 hover:bg-blue-100/70 text-blue-700 text-xs font-bold transition text-center cursor-pointer"
+              className="btn-press glass-button py-2.5 px-2 rounded-xl text-slate-800 text-xs font-bold text-center cursor-pointer shadow-2xs"
             >
               Scan & Bayar
             </button>
             <button
               type="button"
               onClick={onOpenAssetModal}
-              className="btn-press py-2 px-2 rounded-xl bg-blue-50/70 hover:bg-blue-100/70 text-blue-700 text-xs font-bold transition text-center cursor-pointer"
+              className="btn-press glass-button py-2.5 px-2 rounded-xl text-slate-800 text-xs font-bold text-center cursor-pointer shadow-2xs"
             >
               Saldo Token
             </button>
           </div>
         </div>
 
-        {/* Center Column: 3D Glossy Torus Ring with Floating Badges (4 Cols) */}
-        <div className="lg:col-span-4 rounded-3xl bg-white/70 backdrop-blur-md border border-slate-200/90 shadow-sm relative overflow-hidden flex items-center justify-center min-h-[220px]">
-          {/* Subtle background glow */}
-          <div className="absolute inset-0 bg-radial from-blue-400/15 via-transparent to-transparent pointer-events-none" />
+        {/* Center Column: 3D Torus Art Card with Floating Badges (Matching Figma Image 2) */}
+        <div className="lg:col-span-4 rounded-3xl overflow-hidden shadow-2xl border border-white/60 relative flex items-center justify-center min-h-[220px] bg-gradient-to-br from-[#121c24] via-[#091522] to-[#0d2238] group">
+          <img
+            src="/center-torus-card.png"
+            alt="3D Fluid Torus"
+            className="w-full h-full object-cover select-none group-hover:scale-105 transition-transform duration-700"
+          />
 
-          {/* 3D Ring Graphic */}
-          <div className="relative w-44 h-44 flex items-center justify-center animate-float">
-            <img
-              src="/hero-3d-ring.png"
-              alt="3D Fluid Torus"
-              className="w-full h-full object-contain drop-shadow-xl select-none"
-              onError={(e) => {
-                // Fallback SVG ring if image doesn't load
-                e.target.style.display = "none";
-              }}
-            />
+          {/* Floating Token Badges matching Figma Image 2 */}
+          <div className="absolute top-3 right-4 px-3 py-1 rounded-full bg-[#1951FC] text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border border-white/40 animate-float">
+            <span>mUSD</span>
+            <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px] font-bold">$</span>
+          </div>
 
-            {/* Floating Token Badges matching Figma Image 2 */}
-            {/* Top Right: mUSD */}
-            <div className="absolute -top-1 -right-2 px-2.5 py-1 rounded-full bg-[#1951FC] text-white text-[11px] font-extrabold shadow-md flex items-center gap-1">
-              <span>mUSD</span>
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">$</span>
-            </div>
+          <div className="absolute bottom-11 left-3 px-3 py-1 rounded-full bg-teal-500 text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border border-white/40 animate-float" style={{ animationDelay: "0.6s" }}>
+            <span>mJPY</span>
+            <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px] font-bold">¥</span>
+          </div>
 
-            {/* Bottom Center/Left: mJPY */}
-            <div className="absolute bottom-6 left-1 px-2.5 py-1 rounded-full bg-teal-500 text-white text-[11px] font-extrabold shadow-md flex items-center gap-1">
-              <span>mJPY</span>
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">¥</span>
-            </div>
-
-            {/* Bottom Left: mEUR */}
-            <div className="absolute -bottom-1 left-4 px-2.5 py-1 rounded-full bg-indigo-600 text-white text-[11px] font-extrabold shadow-md flex items-center gap-1">
-              <span>mEUR</span>
-              <span className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">€</span>
-            </div>
+          <div className="absolute bottom-2 left-7 px-3 py-1 rounded-full bg-indigo-600 text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border border-white/40 animate-float" style={{ animationDelay: "1.2s" }}>
+            <span>mEUR</span>
+            <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px] font-bold">€</span>
           </div>
         </div>
 
-        {/* Right Column: Aktivitas Terbaru Card (4 Cols) */}
-        <div className="lg:col-span-4 p-6 rounded-3xl bg-white/90 backdrop-blur-md border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4">
+        {/* Right Column: Aktivitas Terbaru Card (Frosted Glass over Turquoise) */}
+        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-panel-hero flex flex-col justify-between space-y-4">
           <div className="space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-white/40">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Aktivitas Terbaru</h3>
               <button
                 type="button"
                 onClick={() => onSelectTab("ledger")}
-                className="text-slate-400 hover:text-blue-600 transition"
+                className="text-slate-500 hover:text-blue-600 transition"
               >
                 →
               </button>
@@ -191,17 +175,17 @@ export default function OverviewView({
               {/* Item 1: Confirmed */}
               <div
                 onClick={() => onSelectTab("ledger")}
-                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 flex items-center justify-between cursor-pointer transition"
+                className="p-2.5 rounded-2xl glass-sub-card hover:bg-white/70 flex items-center justify-between cursor-pointer transition shadow-2xs"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-[11px] font-bold">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-700 flex items-center justify-center text-xs font-extrabold">
                     ✓
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-emerald-600 block leading-tight">
+                    <span className="text-[10px] uppercase font-extrabold text-emerald-700 block leading-tight">
                       CONFIRMED
                     </span>
-                    <span className="font-mono text-xs text-slate-700">0x8a23...e11c</span>
+                    <span className="font-mono text-xs text-slate-800 font-semibold">0x8a23...e11c</span>
                   </div>
                 </div>
                 <span className="text-slate-400 text-xs">›</span>
@@ -210,17 +194,17 @@ export default function OverviewView({
               {/* Item 2: Pending */}
               <div
                 onClick={() => onSelectTab("ledger")}
-                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 flex items-center justify-between cursor-pointer transition"
+                className="p-2.5 rounded-2xl glass-sub-card hover:bg-white/70 flex items-center justify-between cursor-pointer transition shadow-2xs"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-[11px] font-bold">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-700 flex items-center justify-center text-xs font-extrabold">
                     ⏱
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-amber-600 block leading-tight">
+                    <span className="text-[10px] uppercase font-extrabold text-amber-700 block leading-tight">
                       PENDING
                     </span>
-                    <span className="font-mono text-xs text-slate-700">0xf441...88a9</span>
+                    <span className="font-mono text-xs text-slate-800 font-semibold">0xf441...88a9</span>
                   </div>
                 </div>
                 <span className="text-slate-400 text-xs">›</span>
@@ -229,17 +213,17 @@ export default function OverviewView({
               {/* Item 3: Expired */}
               <div
                 onClick={() => onSelectTab("ledger")}
-                className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/70 flex items-center justify-between cursor-pointer transition"
+                className="p-2.5 rounded-2xl glass-sub-card hover:bg-white/70 flex items-center justify-between cursor-pointer transition shadow-2xs"
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-[11px] font-bold">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-700 flex items-center justify-center text-xs font-extrabold">
                     ✕
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-rose-600 block leading-tight">
+                    <span className="text-[10px] uppercase font-extrabold text-rose-700 block leading-tight">
                       EXPIRED
                     </span>
-                    <span className="font-mono text-xs text-slate-700">0x33b1...d22e</span>
+                    <span className="font-mono text-xs text-slate-800 font-semibold">0x33b1...d22e</span>
                   </div>
                 </div>
                 <span className="text-slate-400 text-xs">›</span>
@@ -250,31 +234,31 @@ export default function OverviewView({
           <button
             type="button"
             onClick={() => onSelectTab("ledger")}
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 text-center block w-full transition"
+            className="text-xs font-extrabold text-blue-700 hover:text-blue-800 text-center block w-full transition pt-1"
           >
             Lihat detail transaksi
           </button>
         </div>
       </div>
 
-      {/* 3. Middle Row (3 Equal Cards matching Figma Image 2) */}
+      {/* 3. Middle Row (3 Glass Cards matching Figma Image 2) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         
         {/* Card 1: Saldo Token Mock */}
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="p-6 sm:p-7 rounded-3xl glass-panel flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Saldo Token Mock</h3>
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-extrabold uppercase">
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
                 EXISTING
               </span>
             </div>
 
             <div className="space-y-3">
               {/* mUSD */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-200/70">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl glass-sub-card">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#1951FC] text-white flex items-center justify-center font-extrabold text-xs">
+                  <div className="w-8 h-8 rounded-full bg-[#1951FC] text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
                     mU
                   </div>
                   <div>
@@ -287,9 +271,9 @@ export default function OverviewView({
               </div>
 
               {/* mEUR */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-200/70">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl glass-sub-card">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs">
+                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
                     mE
                   </div>
                   <div>
@@ -302,9 +286,9 @@ export default function OverviewView({
               </div>
 
               {/* mJPY */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-200/70">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl glass-sub-card">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center font-extrabold text-xs">
+                  <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
                     mJ
                   </div>
                   <div>
@@ -324,7 +308,7 @@ export default function OverviewView({
         </div>
 
         {/* Card 2: Aktivitas On-Chain */}
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="p-6 sm:p-7 rounded-3xl glass-panel flex flex-col justify-between space-y-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -332,7 +316,7 @@ export default function OverviewView({
                 <span className="text-[10px] text-slate-400">Berdasarkan event blockchain</span>
               </div>
 
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 text-[10px] font-bold">
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100/80 text-[10px] font-bold">
                 <button
                   type="button"
                   onClick={() => setActiveChartFilter("7d")}
@@ -386,8 +370,8 @@ export default function OverviewView({
                   </linearGradient>
                 </defs>
                 {/* Horizontal guide lines */}
-                <line x1="0" y1="20" x2="280" y2="20" stroke="#f1f5f9" strokeWidth="1" />
-                <line x1="0" y1="50" x2="280" y2="50" stroke="#f1f5f9" strokeWidth="1" />
+                <line x1="0" y1="20" x2="280" y2="20" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
+                <line x1="0" y1="50" x2="280" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
                 <text x="0" y="18" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">20</text>
                 <text x="0" y="48" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">10</text>
                 
@@ -426,7 +410,7 @@ export default function OverviewView({
         </div>
 
         {/* Card 3: Ringkasan Invoice */}
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4">
+        <div className="p-6 sm:p-7 rounded-3xl glass-panel flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Ringkasan Invoice</h3>
@@ -436,15 +420,15 @@ export default function OverviewView({
             </div>
 
             <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between py-1 border-b border-slate-50">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100/60">
                 <span className="text-xs font-semibold text-slate-600">Aktif</span>
                 <span className="text-base font-extrabold text-[#0B192C]">4</span>
               </div>
-              <div className="flex items-center justify-between py-1 border-b border-slate-50">
+              <div className="flex items-center justify-between py-1.5 border-b border-slate-100/60">
                 <span className="text-xs font-semibold text-slate-600">Kedaluwarsa</span>
                 <span className="text-base font-extrabold text-[#0B192C]">2</span>
               </div>
-              <div className="flex items-center justify-between py-1">
+              <div className="flex items-center justify-between py-1.5">
                 <span className="text-xs font-semibold text-slate-600">Cocok</span>
                 <span className="text-base font-extrabold text-[#0B192C]">7</span>
               </div>
@@ -464,13 +448,13 @@ export default function OverviewView({
       {/* 4. Lower Row (Kalkulator Swap + Transaksi On-Chain Terbaru) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         
-        {/* Left: Kalkulator Swap (4.5 or 5 Cols) */}
-        <div className="lg:col-span-5 p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm flex flex-col justify-between space-y-4">
+        {/* Left: Kalkulator Swap (5 Cols) */}
+        <div className="lg:col-span-5 p-6 sm:p-7 rounded-3xl glass-panel flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Kalkulator Swap</h3>
 
             {/* Input BAYAR */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">BAYAR</span>
                 <input
@@ -480,7 +464,7 @@ export default function OverviewView({
                   className="font-extrabold text-lg text-[#0B192C] bg-transparent focus:outline-none w-32"
                 />
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
                 <TokenIcon symbol="mUSD" size="w-4 h-4" />
                 <span>mUSD</span>
               </div>
@@ -495,14 +479,14 @@ export default function OverviewView({
                   setSwapInAmount(swapOutAmount);
                   setSwapOutAmount(t);
                 }}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition cursor-pointer"
               >
                 ⇄
               </button>
             </div>
 
             {/* Input TERIMA */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">TERIMA</span>
                 <input
@@ -512,7 +496,7 @@ export default function OverviewView({
                   className="font-extrabold text-lg text-[#0B192C] bg-transparent focus:outline-none w-32"
                 />
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
                 <TokenIcon symbol="mEUR" size="w-4 h-4" />
                 <span>mEUR</span>
               </div>
@@ -534,7 +518,7 @@ export default function OverviewView({
         </div>
 
         {/* Right: Transaksi On-Chain Terbaru (7 Cols) */}
-        <div className="lg:col-span-7 p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-4">
+        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl glass-panel space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Transaksi On-Chain Terbaru</h3>
             <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-extrabold uppercase">
@@ -553,7 +537,7 @@ export default function OverviewView({
                   <th className="py-2.5 px-3 text-right">HASH</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-sans">
+              <tbody className="divide-y divide-slate-100/70 font-sans">
                 {[
                   {
                     pair: "mUSD/mEUR",
@@ -595,7 +579,7 @@ export default function OverviewView({
                   <tr
                     key={idx}
                     onClick={() => onOpenReceipt && onOpenReceipt({ txHash: row.fullHash, pair: row.pair })}
-                    className="hover:bg-slate-50 transition cursor-pointer"
+                    className="hover:bg-white/60 transition cursor-pointer"
                   >
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5 font-bold text-slate-800">
@@ -642,7 +626,7 @@ export default function OverviewView({
       </div>
 
       {/* 5. Full-Width Bottom Row: Panduan Mulai (5-Step Stepper) */}
-      <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-5">
+      <div className="p-6 sm:p-7 rounded-3xl glass-panel space-y-5">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h3 className="font-extrabold text-sm text-[#0B192C]">Panduan Mulai</h3>
@@ -656,7 +640,7 @@ export default function OverviewView({
         {/* 5 Horizontal Step Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
           {/* Step 1: Connect Wallet (Done) */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200 flex flex-col justify-between h-24">
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between h-24 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="font-extrabold text-xs text-emerald-800">1</span>
               <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">
@@ -667,7 +651,7 @@ export default function OverviewView({
           </div>
 
           {/* Step 2: Create or Scan QR (Done) */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200 flex flex-col justify-between h-24">
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between h-24 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="font-extrabold text-xs text-emerald-800">2</span>
               <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">
@@ -678,7 +662,7 @@ export default function OverviewView({
           </div>
 
           {/* Step 3: Review Payment (Active/Focused) */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/70 border-2 border-blue-600 flex flex-col justify-between h-24 shadow-xs">
+          <div className="p-3.5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 flex flex-col justify-between h-24 shadow-xs">
             <div className="flex items-center justify-between">
               <span className="font-extrabold text-xs text-blue-800">3</span>
               <span className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center text-xs text-blue-600 font-bold">
@@ -689,13 +673,13 @@ export default function OverviewView({
           </div>
 
           {/* Step 4: Confirm Transaction */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between h-24 text-slate-400">
+          <div className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between h-24 text-slate-400">
             <span className="font-extrabold text-xs">4</span>
             <span className="font-bold text-xs text-slate-500">Confirm Transaction</span>
           </div>
 
           {/* Step 5: Verify Blockchain */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between h-24 text-slate-400">
+          <div className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between h-24 text-slate-400">
             <span className="font-extrabold text-xs">5</span>
             <span className="font-bold text-xs text-slate-500">Verify Blockchain</span>
           </div>
@@ -714,7 +698,7 @@ export default function OverviewView({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-[11px] font-medium hidden md:inline">
+            <span className="px-3 py-1 rounded-full bg-white/60 border border-white/60 text-slate-600 text-[11px] font-medium hidden md:inline">
               Quick note: Test ETH is gas only.
             </span>
             <button

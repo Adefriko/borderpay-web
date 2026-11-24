@@ -77,25 +77,25 @@ export default function LedgerView({
       </div>
 
       {/* Top Stats Overview Card (Matching Figma Image 5) */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-6">
+      <div className="p-5 sm:p-6 rounded-3xl glass-panel flex flex-wrap items-center justify-between gap-6">
         <div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">
+          <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
             Jumlah transaksi tersedia: {history.length}
           </span>
-          <span className="text-xs text-slate-500 font-medium">
+          <span className="text-xs text-slate-600 font-medium">
             Rentang query event Q-Blok terbaru
           </span>
         </div>
 
         <div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+          <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
             TOKEN DIDUKUNG
           </span>
           <div className="flex items-center gap-2">
             {["mUSD", "mEUR", "mJPY"].map((sym) => (
               <span
                 key={sym}
-                className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
+                className="px-2.5 py-1 rounded-xl glass-sub-card text-slate-800 text-xs font-bold"
               >
                 {sym}
               </span>
@@ -104,13 +104,13 @@ export default function LedgerView({
         </div>
 
         <div>
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">
+          <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
             ALAMAT GATEWAY
           </span>
           <button
             type="button"
             onClick={() => copyText(CONTRACT_ADDRESSES.CoinSwapPayment, "Gateway Contract")}
-            className="flex items-center gap-1.5 font-mono text-xs font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+            className="flex items-center gap-1.5 font-mono text-xs font-bold text-blue-700 hover:text-blue-800 cursor-pointer"
           >
             <span>{gatewayShort}</span>
             <IconCopy className="w-3.5 h-3.5" />
@@ -122,7 +122,7 @@ export default function LedgerView({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Table Container (7 or 8 Cols) */}
-        <div className="lg:col-span-8 p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-4">
+        <div className="lg:col-span-8 p-6 sm:p-7 rounded-3xl glass-panel space-y-4">
           
           {/* Table Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
@@ -316,7 +316,7 @@ export default function LedgerView({
         </div>
 
         {/* Right Detail Card (Matching Figma Image 5 Flyout) */}
-        <div className="lg:col-span-4 p-6 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-5">
+        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-panel space-y-5">
           {activeTx ? (
             <>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -326,13 +326,13 @@ export default function LedgerView({
                     {activeTx.orderId ? activeTx.orderId.slice(0, 10) : "ORD-20931"}
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-200">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 text-[10px] font-extrabold border border-emerald-400/30">
                   Confirmed
                 </span>
               </div>
 
               {/* Hash Box */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="p-3 rounded-2xl glass-sub-card space-y-1">
                 <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
                   HASH TRANSAKSI
                 </span>

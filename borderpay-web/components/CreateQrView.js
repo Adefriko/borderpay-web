@@ -79,20 +79,20 @@ export default function CreateQrView({
       {/* 2. Main 2-Column Grid matching Figma Image 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: Form Card (7 Cols) */}
-        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl bg-white border border-slate-200/90 shadow-sm space-y-5">
+        {/* Left Column: Form Card (7 Cols, Frosted Glass) */}
+        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl glass-panel-hero space-y-5">
           <form onSubmit={onGenerate} className="space-y-4">
             
             {/* Alamat Penerima */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700">
+                <label className="text-xs font-bold text-slate-800">
                   Alamat penerima
                 </label>
                 <button
                   type="button"
                   onClick={useConnectedWallet}
-                  className="btn-press text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                  className="btn-press text-[11px] font-bold text-blue-700 hover:text-blue-800 hover:underline cursor-pointer"
                 >
                   Gunakan wallet terhubung
                 </button>
@@ -103,13 +103,13 @@ export default function CreateQrView({
                 onChange={(e) => setReceiver(e.target.value)}
                 placeholder="0x71C7...9A3F"
                 required
-                className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
               />
             </div>
 
             {/* Nama Merchant (Opsional) */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">
+              <label className="text-xs font-bold text-slate-800">
                 Nama merchant (opsional)
               </label>
               <input
@@ -117,7 +117,7 @@ export default function CreateQrView({
                 value={merchantName}
                 onChange={(e) => setMerchantName(e.target.value)}
                 placeholder="Toko Kopi Nusantara"
-                className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
               />
             </div>
 
@@ -125,7 +125,7 @@ export default function CreateQrView({
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
               {/* Jumlah */}
               <div className="sm:col-span-6 space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Jumlah</label>
+                <label className="text-xs font-bold text-slate-800">Jumlah</label>
                 <input
                   type="number"
                   step="any"
@@ -133,16 +133,16 @@ export default function CreateQrView({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="250.00"
                   required
-                  className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-[#0B192C] placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                  className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs font-extrabold text-[#0B192C] placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
                 />
-                <span className="text-[10px] text-slate-400 block font-medium">
+                <span className="text-[10px] text-slate-500 block font-medium">
                   Maksimum mock: 10,000.00
                 </span>
               </div>
 
               {/* Token Selector Pills */}
               <div className="sm:col-span-6 space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Token</label>
+                <label className="text-xs font-bold text-slate-800">Token</label>
                 <div className="flex items-center gap-1.5">
                   {TOKENS.map((tok) => {
                     const isSel = tokenOut.toLowerCase() === tok.address.toLowerCase();
@@ -153,8 +153,8 @@ export default function CreateQrView({
                         onClick={() => setTokenOut(tok.address)}
                         className={`flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-2xl border text-xs font-bold transition cursor-pointer ${
                           isSel
-                            ? "border-blue-600 bg-blue-50/80 text-blue-700 shadow-2xs"
-                            : "border-slate-200 bg-slate-50/80 hover:bg-slate-100 text-slate-600"
+                            ? "border-blue-600 bg-blue-50/90 text-blue-700 shadow-2xs"
+                            : "glass-sub-card hover:bg-white/80 text-slate-700"
                         }`}
                       >
                         <TokenIcon symbol={tok.symbol} size="w-3.5 h-3.5" />
@@ -168,19 +168,19 @@ export default function CreateQrView({
 
             {/* Memo Invoice */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Memo invoice</label>
+              <label className="text-xs font-bold text-slate-800">Memo invoice</label>
               <input
                 type="text"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="Contoh: Pembayaran pesanan #A-024"
-                className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
               />
             </div>
 
             {/* Kedaluwarsa Presets */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Kedaluwarsa</label>
+              <label className="text-xs font-bold text-slate-800">Kedaluwarsa</label>
               <div className="flex items-center gap-2">
                 {[
                   { val: "5", label: "5 menit" },
@@ -195,7 +195,7 @@ export default function CreateQrView({
                     className={`flex-1 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                       expiryMinutes === exp.val
                         ? "bg-[#1951FC] text-white shadow-2xs"
-                        : "bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600"
+                        : "glass-sub-card hover:bg-white/80 text-slate-700"
                     }`}
                   >
                     {exp.label}

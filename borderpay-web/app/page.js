@@ -462,11 +462,55 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-[#0B192C] flex flex-col relative selection:bg-blue-600 selection:text-white">
-      {/* Background with fluid turquoise refraction glass lighting */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#eaf4fb]">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[550px] bg-gradient-to-b from-[#bde4f9]/80 via-[#d1effe]/50 to-transparent blur-3xl rounded-full opacity-80" />
-        <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-gradient-to-l from-[#a5daf5]/40 to-transparent blur-3xl rounded-full" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-[#c8e9fa]/50 to-transparent blur-3xl rounded-full" />
+      {/* Background with fluid turquoise refraction glass atmosphere matching Figma */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#f0f6f8] overflow-hidden">
+        {/* Upper rich ocean turquoise atmosphere across the top 480px */}
+        <div 
+          className="absolute top-0 inset-x-0 h-[500px] w-full"
+          style={{
+            background: "linear-gradient(180deg, #3aa7c4 0%, #4db5cf 28%, #72c6da 55%, #aee3ed 78%, #e4f5f8 92%, #f0f6f8 100%)",
+          }}
+        />
+
+        {/* 3D fluid glass refraction curves with golden caustics */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[1500px] h-[520px] pointer-events-none opacity-85">
+          <svg className="w-full h-full" viewBox="0 0 1500 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M-100 80 Q 250 -40, 650 60 T 1400 30 Q 1600 200, 1450 340 T 700 310 Q 200 420, -100 280 Z"
+              fill="url(#glass-wave-grad)"
+              filter="url(#wave-blur)"
+            />
+            {/* Golden caustic rim reflection line matching Figma */}
+            <path
+              d="M-50 90 Q 280 -20, 680 75 T 1420 40"
+              stroke="url(#gold-caustic)"
+              strokeWidth="4"
+              strokeLinecap="round"
+              opacity="0.7"
+              filter="blur(1px)"
+            />
+            <defs>
+              <linearGradient id="glass-wave-grad" x1="0" y1="0" x2="1500" y2="400" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#1e9cb8" stopOpacity="0.45" />
+                <stop offset="0.35" stopColor="#3ac8e5" stopOpacity="0.65" />
+                <stop offset="0.7" stopColor="#168fae" stopOpacity="0.5" />
+                <stop offset="1" stopColor="#55d4ee" stopOpacity="0.3" />
+              </linearGradient>
+              <linearGradient id="gold-caustic" x1="0" y1="0" x2="1400" y2="0" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#f59e0b" stopOpacity="0.2" />
+                <stop offset="0.3" stopColor="#fde047" stopOpacity="0.8" />
+                <stop offset="0.6" stopColor="#f59e0b" stopOpacity="0.7" />
+                <stop offset="1" stopColor="#38bdf8" stopOpacity="0.4" />
+              </linearGradient>
+              <filter id="wave-blur" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="30" />
+              </filter>
+            </defs>
+          </svg>
+        </div>
+
+        <div className="absolute top-10 right-[-120px] w-[600px] h-[400px] bg-gradient-to-bl from-[#76d3e8]/45 via-[#27a8c7]/25 to-transparent blur-3xl rounded-full pointer-events-none" />
+        <div className="absolute top-20 left-[-150px] w-[650px] h-[400px] bg-gradient-to-tr from-[#1b97b6]/35 via-[#51c0d9]/25 to-transparent blur-3xl rounded-full pointer-events-none" />
       </div>
 
       {/* Floating Top Navigation Bar (Matching Figma Design) */}
