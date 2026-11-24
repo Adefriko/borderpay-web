@@ -14,17 +14,17 @@ import { triggerConfetti } from "../../components/Confetti";
 import TokenBalancesModal from "../../components/TokenBalancesModal";
 import PaymentTimeline from "../../components/PaymentTimeline";
 import TransactionReceiptModal from "../../components/TransactionReceiptModal";
+import OceanBackdrop from "../../components/OceanBackdrop";
 import { useToast } from "../../components/ToastContext";
 import { verifyInvoiceIntegrity } from "../../lib/invoiceIntegrity";
 import { updateInvoiceStatus } from "../../lib/invoiceStore";
 import {
-  IconBorderPayLogo,
+  IconBorderPayMark,
   TokenIcon,
   IconCheck,
   IconCopy,
   IconExternalLink,
   IconShieldCheck,
-  IconClock,
   IconSwap,
   IconWallet,
   IconRefresh,
@@ -372,10 +372,6 @@ function PaymentContent() {
         triggerConfetti();
         playPaymentSuccessChime();
         toast.success("Pembayaran Sukses!", "Transaksi telah tercatat permanen di Sepolia.");
-
-        triggerConfetti();
-        playPaymentSuccessChime();
-        toast.success("Pembayaran Sukses!", "Transaksi telah tercatat permanen di Sepolia.");
       } else {
         throw new Error("Transaksi gagal dieksekusi di blockchain.");
       }
@@ -424,37 +420,97 @@ function PaymentContent() {
     amountOut,
   };
 
+  const checkoutStep = !walletAddress
+    ? 2
+    : status === "SUCCESS"
+    ? 5
+    : status === "APPROVING" || status === "SWAPPING" || (isApprovalRequired && !isApproved)
+    ? 4
+    : 3;
+
   return (
-    <div className="min-h-screen bg-[#F3F7FC] text-[#0B192C] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-10 relative selection:bg-blue-600/20 selection:text-blue-900">
-      <div className="w-full max-w-4xl space-y-6">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 hover:opacity-85 transition">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-              <span className="font-extrabold text-lg">B</span>
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-tight text-[#0B192C] block leading-tight">
-                BorderPay Checkout
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium block">
-                Web3 QR Payment & Swap
-              </span>
-            </div>
+    <div className="min-h-screen text-[#0B192C] flex flex-col items-center p-4 sm:p-6 lg:p-8 relative selection:bg-blue-600/20 selection:text-blue-900">
+      <OceanBackdrop variant="light" />
+
+      <div className="w-full max-w-5xl space-y-6">
+        {/* Top Floating Checkout Navbar (Matched to Figma Image 10) */}
+        <header className="glass-nav-light rounded-full px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
+          <Link href="/" className="btn-press flex items-center gap-2.5 hover:opacity-90 transition">
+            <IconBorderPayMark className="w-8 h-8 rounded-xl shadow-2xs" />
+            <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0B192C]">
+              BorderPay
+            </span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 flex items-center gap-1.5 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Sepolia Testnet</span>
+          <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-slate-100/80 text-xs font-bold">
+            <Link href="/" className="px-3.5 py-1.5 rounded-full text-slate-600 hover:text-[#0B192C]">
+              Overview
+            </Link>
+            <span className="px-3.5 py-1.5 rounded-full bg-white text-[#1951FC] shadow-2xs">
+              Scan & Pay Checkout
             </span>
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:flex text-[11px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+              <span>SEPOLIA TESTNET</span>
+            </span>
+            {walletAddress && (
+              <span className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-full bg-[#0B192C] text-white">
+                {walletAddress.slice(0, 6)}..{walletAddress.slice(-4)}
+              </span>
+            )}
             <button
+              type="button"
               onClick={() => setIsAssetModalOpen(true)}
-              className="text-xs font-bold px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-2xs cursor-pointer"
+              className="btn-press text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-2xs cursor-pointer"
               title="Cek Saldo Koin"
             >
               Saldo 💳
             </button>
           </div>
+        </header>
+
+        {/* 5-Step Checkout Progress Header (Matched to Figma Image 10) */}
+        <div className="surface-card rounded-full p-2 px-4 hidden sm:flex items-center justify-between gap-2 text-xs font-bold">
+          {[
+            { num: 1, label: "Review Invoice" },
+            { num: 2, label: "Connect Wallet" },
+            { num: 3, label: "Select Token" },
+            { num: 4, label: "Approve" },
+            { num: 5, label: "Confirm" },
+          ].map((s, idx) => {
+            const done = checkoutStep > s.num || status === "SUCCESS";
+            const active = checkoutStep === s.num && status !== "SUCCESS";
+            return (
+              <div key={s.num} className="flex items-center gap-2 flex-1 justify-center">
+                <div
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition ${
+                    active
+                      ? "bg-[#1951FC] text-white shadow-sm"
+                      : done
+                      ? "text-emerald-600"
+                      : "text-slate-400"
+                  }`}
+                >
+                  <span
+                    className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-extrabold ${
+                      active
+                        ? "bg-white/25 text-white"
+                        : done
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {done ? "✓" : s.num}
+                  </span>
+                  <span className="whitespace-nowrap">{s.label}</span>
+                </div>
+                {idx < 4 && <div className="h-px flex-1 bg-slate-200/80 hidden lg:block" />}
+              </div>
+            );
+          })}
         </div>
 
         {integrityState.isTampered && (
@@ -474,14 +530,9 @@ function PaymentContent() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 border border-slate-200/80 bg-white shadow-xs space-y-6 text-slate-800">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-600" />
-                <h2 className="text-sm font-extrabold text-[#0B192C] uppercase tracking-wider">
-                  Ringkasan Tagihan
-                </h2>
-              </div>
+          <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 surface-card space-y-5 text-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-extrabold text-[#0B192C]">Ringkasan Invoice</h2>
               <span
                 className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
                   isExpired
@@ -516,43 +567,69 @@ function PaymentContent() {
               </div>
             )}
 
-            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 text-center space-y-1">
-              <span className="text-xs text-slate-500 font-semibold">Total Diterima Merchant</span>
-              <div className="flex items-center justify-center gap-2 mt-1">
-                <TokenIcon symbol={tokenOutInfo.symbol} size="w-8 h-8" />
+            <div className="py-2 space-y-1">
+              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold block">
+                JUMLAH YANG DITERIMA
+              </span>
+              <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-extrabold text-[#0B192C]">
-                  {amountOut} {tokenOutInfo.symbol}
+                  {amountOut}
                 </span>
+                <span className="text-sm font-bold text-slate-500">{tokenOutInfo.symbol}</span>
               </div>
-              {memo && <p className="text-xs text-slate-600 mt-1 italic font-sans">{memo}</p>}
+              {memo && <p className="text-xs text-slate-600 pt-1 font-medium">{memo}</p>}
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Merchant Penerima:</span>
+            <div className="space-y-3 text-xs border-t border-slate-100 pt-3">
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Penerima:</span>
                 <span className="font-mono font-bold text-slate-800">
-                  {receiver ? `${receiver.slice(0, 8)}...${receiver.slice(-6)}` : "-"}
+                  {receiver ? `${receiver.slice(0, 6)}..${receiver.slice(-4)}` : "-"}
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
-                <span className="text-slate-500 font-medium">Masa Berlaku Invoice:</span>
-                <span
-                  className={`font-bold flex items-center gap-1 ${
-                    timeRemaining < 120 ? "text-amber-600 animate-pulse" : "text-slate-800"
-                  }`}
-                >
-                  <IconClock className="w-3.5 h-3.5 text-blue-600" />
-                  <span>{timeRemaining > 0 ? formatTimer(timeRemaining) : "Habis"}</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">SISA WAKTU</span>
+                  <span className={`font-bold text-xs ${isExpired ? "text-rose-600" : "text-emerald-600"}`}>
+                    {isExpired ? "Invoice kedaluwarsa" : "Invoice aktif"}
+                  </span>
+                </div>
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15"
+                      fill="none"
+                      stroke={isExpired ? "#e11d48" : "#0891b2"}
+                      strokeWidth="3"
+                      strokeDasharray="94"
+                      strokeDashoffset={isExpired ? "94" : "18"}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="absolute font-mono font-extrabold text-[10px] text-[#0B192C]">
+                    {timeRemaining > 0 ? formatTimer(timeRemaining) : "00:00"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
+                <span className="text-slate-500 font-medium">Jaringan:</span>
+                <span className="text-slate-800 font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#1951FC]" />
+                  <span>Ethereum Sepolia Testnet</span>
                 </span>
               </div>
 
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Biaya Protokol:</span>
                 <span className="text-emerald-600 font-bold">0.00%</span>
               </div>
 
-              <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+              <div className="flex justify-between items-center py-1 border-b border-slate-100">
                 <span className="text-slate-500 font-medium">Tipe Smart Contract:</span>
                 <span className="text-slate-800 font-bold flex items-center gap-1">
                   <IconShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
@@ -588,29 +665,14 @@ function PaymentContent() {
             </div>
           </div>
 
-          <div className="lg:col-span-7 rounded-3xl p-6 sm:p-7 border border-slate-200/80 bg-white shadow-xs space-y-6 text-slate-800">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h2 className="text-base font-extrabold text-[#0B192C]">Pilih Token Bayar</h2>
-
-              {walletAddress && (
-                <div className="text-right">
-                  <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-                    {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700">
-                Pilih Token untuk Membayar:
-              </label>
+          <div className="lg:col-span-7 space-y-5 text-slate-800">
+            {/* Vibrant Blue Token Picker Banner Card (Matched to Figma Image 10) */}
+            <div className="rounded-3xl p-6 bg-gradient-to-br from-[#0e86b8] via-[#1951FC] to-[#0b35c4] text-white shadow-xl shadow-blue-900/15 space-y-4">
+              <h2 className="text-sm font-extrabold tracking-wide">Pilih token pembayaran</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {TOKENS.map((t) => {
                   const isSelected = tokenInAddr.toLowerCase() === t.address.toLowerCase();
-                  const bal = parseFloat(allBalances[t.address.toLowerCase()] || "0").toFixed(2);
-
                   return (
                     <button
                       key={t.address}
@@ -619,28 +681,43 @@ function PaymentContent() {
                         status === "APPROVING" || status === "SWAPPING" || status === "SUCCESS"
                       }
                       onClick={() => setTokenInAddr(t.address)}
-                      className={`p-3.5 rounded-2xl border transition text-left cursor-pointer flex flex-col justify-between ${
+                      className={`btn-press p-3 rounded-2xl border transition text-left cursor-pointer flex items-center justify-between gap-2 ${
                         isSelected
-                          ? "bg-blue-50 border-blue-500 ring-2 ring-blue-500/20 shadow-xs"
-                          : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-700"
+                          ? "bg-white text-[#0B192C] border-white shadow-md"
+                          : "bg-white/15 hover:bg-white/25 text-white border-white/30 backdrop-blur-md"
                       }`}
                     >
-                      <div className="flex items-center justify-between w-full">
-                        <TokenIcon symbol={t.symbol} size="w-7 h-7" />
-                        {isSelected && <IconCheck className="w-4 h-4 text-blue-600" />}
+                      <div className="flex items-center gap-2">
+                        <TokenIcon symbol={t.symbol} size="w-6 h-6" />
+                        <span className="font-extrabold text-xs">{t.symbol}</span>
                       </div>
-
-                      <div className="mt-2.5">
-                        <span className="block font-extrabold text-sm text-[#0B192C]">{t.symbol}</span>
-                        <span className="text-[11px] text-slate-500 font-mono mt-0.5 block">
-                          Saldo: <strong className="text-slate-800">{walletAddress ? bal : "—"}</strong>
+                      {isSelected && (
+                        <span className="w-4 h-4 rounded-full bg-[#1951FC] text-white flex items-center justify-center text-[10px]">
+                          ✓
                         </span>
-                      </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
+
+              <div className="flex items-center justify-between text-xs text-blue-100">
+                <span>
+                  Saldo:{" "}
+                  <strong className="text-white font-mono">
+                    {walletAddress ? `${currentPayerBalance.toFixed(2)} ${tokenInInfo.symbol}` : "Hubungkan wallet"}
+                  </strong>
+                </span>
+                {walletAddress && (
+                  <span className="font-mono text-[11px] bg-white/15 px-2.5 py-0.5 rounded-full">
+                    {walletAddress.slice(0, 6)}..{walletAddress.slice(-4)}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* White Execution Details Card */}
+            <div className="rounded-3xl p-6 sm:p-7 surface-card space-y-5">
 
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex justify-between items-center text-xs">
@@ -843,6 +920,7 @@ function PaymentContent() {
                 )}
               </button>
             )}
+            </div>
           </div>
         </div>
       </div>
@@ -866,10 +944,10 @@ export default function PayPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#030A22] text-white flex items-center justify-center">
+        <div className="min-h-screen bg-[#eef4f8] text-[#0B192C] flex items-center justify-center">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-semibold text-[#CBE9FD]">
+            <div className="w-6 h-6 border-2 border-[#1951FC] border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-bold text-slate-700">
               Memuat Invoice Pembayaran...
             </span>
           </div>

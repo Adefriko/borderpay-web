@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { TOKENS } from "../constants/contracts";
+import { getLocalInvoices } from "../lib/invoiceStore";
 import {
   TokenIcon,
   IconCopy,
@@ -7,10 +9,20 @@ import {
 } from "./Icons";
 import { useToast } from "./ToastContext";
 
+const SIMULATED_RATES = {
+  "mUSD->mEUR": 0.92,
+  "mEUR->mUSD": 1.087,
+  "mUSD->mJPY": 150,
+  "mJPY->mUSD": 0.006667,
+  "mEUR->mJPY": 163,
+  "mJPY->mEUR": 0.006135,
+};
+
 export default function OverviewView({
   walletAddress = "",
   tokenBalances = { mUSD: "10,000.00", mEUR: "10,000.00", mJPY: "1,000,000" },
   ethBalance = "0.482",
+  history = [],
   onSelectTab,
   onOpenScanner,
   onOpenAssetModal,
@@ -20,8 +32,9 @@ export default function OverviewView({
   const toast = useToast();
   const [copiedHeroWallet, setCopiedHeroWallet] = useState(false);
   const [activeChartFilter, setActiveChartFilter] = useState("7d");
-  const [swapInAmount, setSwapInAmount] = useState("1,000.00");
-  const [swapOutAmount, setSwapOutAmount] = useState("920.00");
+  const [swapInAmount, setSwapInAmount] = useState("1000");
+  const [swapInSymbol, setSwapInSymbol] = useState("mUSD");
+  const [swapOutSymbol, setSwapOutSymbol] = useState("mEUR");
 
   const displayAddr = walletAddress || "0x71C7656EC7ab88b098defB751B7401B5f6d89A3F";
   const shortAddr = `${displayAddr.slice(0, 6)}...${displayAddr.slice(-4)}`;
@@ -33,9 +46,41 @@ export default function OverviewView({
     setTimeout(() => setCopiedHeroWallet(false), 2000);
   };
 
+  // Interactive Swap Calculator estimation
+  const pairRate =
+    swapInSymbol === swapOutSymbol
+      ? 1
+      : SIMULATED_RATES[`${swapInSymbol}->${swapOutSymbol}`] || 1;
+  const parsedIn = parseFloat(swapInAmount.replace(/,/g, "")) || 0;
+  const computedOut = (parsedIn * pairRate).toLocaleString("en-US", {
+    minimumFractionDigits: swapOutSymbol === "mJPY" ? 0 : 2,
+    maximumFractionDigits: swapOutSymbol === "mJPY" ? 0 : 2,
+  });
+
+  const handleFlipSwap = () => {
+    setSwapInSymbol(swapOutSymbol);
+    setSwapOutSymbol(swapInSymbol);
+  };
+
+  // Real local invoice summary stats combined with on-chain count
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
+  const localInvoices = typeof window !== "undefined" ? getLocalInvoices() : [];
+  const activeInvCount =
+    localInvoices.length > 0
+      ? localInvoices.filter((inv) => !inv.deadline || inv.deadline >= nowSec).length
+      : 4;
+  const expiredInvCount =
+    localInvoices.length > 0
+      ? localInvoices.filter((inv) => inv.deadline && inv.deadline < nowSec).length
+      : 2;
+  const matchedInvCount = history.length > 0 ? history.length : 7;
+
+  // Live recent transactions preview (falls back to baseline if empty)
+  const recentTxs = history.slice(0, 4);
+
   return (
     <div className="space-y-6 text-[#0B192C]">
-      {/* 1. Header Row (Crisp White Typography over Ocean 3D Glass Backdrop) */}
+      {/* 1. Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pt-1">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-[0_2px_10px_rgba(3,30,60,0.22)]">
@@ -46,23 +91,23 @@ export default function OverviewView({
           </p>
         </div>
         <span className="text-[10px] font-extrabold uppercase text-white/75 tracking-wider">
-          TERAKHIR DIPERBARUI 14:32 WIB
+          SEPOLIA TESTNET • LIVE SYNC
         </span>
       </div>
 
       {/* 2. Top Hero Section (3-Column Translucent Frosted Glass Grid matching Figma Image 2) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         
-        {/* Left Column: Wallet Status Card (Translucent Frosted Glass over 3D Ocean) */}
+        {/* Left Column: Wallet Status Card */}
         <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean flex flex-col justify-between space-y-5 text-white">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold uppercase text-white/75 tracking-wider">
-                WALLET TERHUBUNG
+                {walletAddress ? "WALLET TERHUBUNG" : "DEMO PREVIEW WALLET"}
               </span>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-extrabold border border-emerald-300/40 backdrop-blur-md flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>ACTIVE</span>
+                <span>{walletAddress ? "ACTIVE" : "DEMO"}</span>
               </span>
             </div>
 
@@ -120,30 +165,25 @@ export default function OverviewView({
           </div>
         </div>
 
-        {/* Center Column: Pure Vector 3D Glass Torus Sculpture (Single Crisp Badge Set, Zero Duplication) */}
+        {/* Center Column: Pure Vector 3D Glass Torus Sculpture (Single Clean Token Badges) */}
         <div className="lg:col-span-4 rounded-3xl overflow-hidden shadow-2xl border border-white/45 relative flex items-center justify-center min-h-[240px] bg-[radial-gradient(circle_at_50%_38%,#14507a_0%,#09253f_62%,#04111f_100%)] group">
-          {/* Ambient Pedestal Halo */}
           <div className="absolute bottom-3 w-48 h-8 rounded-full bg-cyan-400/25 blur-xl pointer-events-none" />
 
-          {/* Clean Multi-Layered SVG 3D Glossy Mobius Glass Torus */}
           <svg
             className="w-56 h-56 drop-shadow-[0_18px_36px_rgba(14,165,233,0.45)] animate-float select-none"
             viewBox="0 0 240 240"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Outer Glossy Glass Loop */}
             <path
               d="M120 34C72.5 34 34 72.5 34 120C34 167.5 72.5 206 120 206C167.5 206 206 167.5 206 120C206 72.5 167.5 34 120 34ZM120 174C90.2 174 66 149.8 66 120C66 90.2 90.2 66 120 66C149.8 66 174 90.2 174 120C174 149.8 149.8 174 120 174Z"
               fill="url(#torus-outer-grad)"
             />
-            {/* Twisted Inner S-Curve Glass Ribbon */}
             <path
               d="M46 118C52 84 86 64 122 86C158 108 192 92 194 120C190 156 156 174 118 152C82 130 50 144 46 118Z"
               fill="url(#torus-ribbon-grad)"
               opacity="0.92"
             />
-            {/* Specular Ice Highlights */}
             <path
               d="M66 66C84 48 112 42 138 48"
               stroke="rgba(224,242,254,0.85)"
@@ -162,7 +202,6 @@ export default function OverviewView({
               strokeWidth="3"
               strokeLinecap="round"
             />
-            {/* Subtle Floor Reflection Ellipse */}
             <ellipse cx="120" cy="214" rx="64" ry="8" fill="url(#floor-glow)" />
             <defs>
               <linearGradient id="torus-outer-grad" x1="34" y1="34" x2="206" y2="206" gradientUnits="userSpaceOnUse">
@@ -183,7 +222,6 @@ export default function OverviewView({
             </defs>
           </svg>
 
-          {/* Single Clean Set of Floating Glass Token Badges */}
           <button
             type="button"
             onClick={onOpenAssetModal}
@@ -214,7 +252,7 @@ export default function OverviewView({
           </button>
         </div>
 
-        {/* Right Column: Aktivitas Terbaru Card (Translucent Frosted Glass over 3D Ocean) */}
+        {/* Right Column: Aktivitas Terbaru Card (Wired to Live History + Receipt) */}
         <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean flex flex-col justify-between space-y-4 text-white">
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/25">
@@ -230,59 +268,36 @@ export default function OverviewView({
             </div>
 
             <div className="space-y-2">
-              <div
-                onClick={() => onSelectTab("ledger")}
-                className="p-2.5 rounded-2xl glass-hero-row flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-emerald-400/25 text-emerald-200 border border-emerald-300/35 flex items-center justify-center text-xs font-extrabold">
-                    ✓
+              {recentTxs.slice(0, 3).map((tx, i) => (
+                <div
+                  key={tx.id || tx.txHash || i}
+                  onClick={() => onOpenReceipt && onOpenReceipt(tx)}
+                  className="p-2.5 rounded-2xl glass-hero-row flex items-center justify-between cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-extrabold ${
+                        i === 0
+                          ? "bg-emerald-400/25 text-emerald-200 border-emerald-300/35"
+                          : i === 1
+                          ? "bg-sky-400/25 text-sky-200 border-sky-300/35"
+                          : "bg-white/15 text-white/85 border-white/25"
+                      }`}
+                    >
+                      ✓
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-extrabold text-emerald-200 block leading-tight">
+                        CONFIRMED • {tx.pair}
+                      </span>
+                      <span className="font-mono text-xs text-white font-semibold">
+                        {tx.txHash ? `${tx.txHash.slice(0, 6)}...${tx.txHash.slice(-4)}` : "-"}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-extrabold text-emerald-200 block leading-tight">
-                      CONFIRMED
-                    </span>
-                    <span className="font-mono text-xs text-white font-semibold">0x8a23...e11c</span>
-                  </div>
+                  <span className="text-white/60 text-xs">›</span>
                 </div>
-                <span className="text-white/60 text-xs">›</span>
-              </div>
-
-              <div
-                onClick={() => onSelectTab("ledger")}
-                className="p-2.5 rounded-2xl glass-hero-row flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-amber-400/25 text-amber-200 border border-amber-300/35 flex items-center justify-center text-xs font-extrabold">
-                    ⏱
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-extrabold text-amber-200 block leading-tight">
-                      PENDING
-                    </span>
-                    <span className="font-mono text-xs text-white font-semibold">0xf441...88a9</span>
-                  </div>
-                </div>
-                <span className="text-white/60 text-xs">›</span>
-              </div>
-
-              <div
-                onClick={() => onSelectTab("ledger")}
-                className="p-2.5 rounded-2xl glass-hero-row flex items-center justify-between cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-full bg-white/15 text-white/80 border border-white/25 flex items-center justify-center text-xs font-extrabold">
-                    ✕
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-extrabold text-white/75 block leading-tight">
-                      EXPIRED
-                    </span>
-                    <span className="font-mono text-xs text-white font-semibold">0x33b1...d22e</span>
-                  </div>
-                </div>
-                <span className="text-white/60 text-xs">›</span>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -296,10 +311,8 @@ export default function OverviewView({
         </div>
       </div>
 
-      {/* 3. Middle Row (3 Crisp White Data Cards matching Figma Image 2) */}
+      {/* 3. Middle Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        
-        {/* Card 1: Saldo Token Mock */}
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -310,47 +323,29 @@ export default function OverviewView({
             </div>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3.5 rounded-2xl glass-sub-card">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#1951FC] text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
-                    mU
+              {[
+                { sym: "mUSD", badge: "mU", color: "bg-[#1951FC]", val: tokenBalances.mUSD || "10,000.00" },
+                { sym: "mEUR", badge: "mE", color: "bg-indigo-600", val: tokenBalances.mEUR || "10,000.00" },
+                { sym: "mJPY", badge: "mJ", color: "bg-teal-500", val: tokenBalances.mJPY || "1,000,000" },
+              ].map((tok) => (
+                <button
+                  key={tok.sym}
+                  type="button"
+                  onClick={onOpenAssetModal}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl glass-sub-card hover:border-blue-300 transition cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-full ${tok.color} text-white flex items-center justify-center font-extrabold text-xs shadow-xs`}>
+                      {tok.badge}
+                    </div>
+                    <div>
+                      <span className="font-extrabold text-sm text-[#0B192C] block">{tok.val}</span>
+                      <span className="text-[10px] text-slate-400 font-bold block">{tok.sym}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-extrabold text-sm text-[#0B192C] block">
-                      {tokenBalances.mUSD || "10,000.00"}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-bold block">mUSD</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 rounded-2xl glass-sub-card">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
-                    mE
-                  </div>
-                  <div>
-                    <span className="font-extrabold text-sm text-[#0B192C] block">
-                      {tokenBalances.mEUR || "10,000.00"}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-bold block">mEUR</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3.5 rounded-2xl glass-sub-card">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
-                    mJ
-                  </div>
-                  <div>
-                    <span className="font-extrabold text-sm text-[#0B192C] block">
-                      {tokenBalances.mJPY || "1,000,000"}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-bold block">mJPY</span>
-                  </div>
-                </div>
-              </div>
+                  <span className="text-slate-400 text-xs">›</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -359,7 +354,6 @@ export default function OverviewView({
           </p>
         </div>
 
-        {/* Card 2: Aktivitas On-Chain */}
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -369,33 +363,22 @@ export default function OverviewView({
               </div>
 
               <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 text-[10px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setActiveChartFilter("7d")}
-                  className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
-                    activeChartFilter === "7d" ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
-                  }`}
-                >
-                  7 Hari
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveChartFilter("30d")}
-                  className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
-                    activeChartFilter === "30d" ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
-                  }`}
-                >
-                  30 Hari
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveChartFilter("all")}
-                  className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
-                    activeChartFilter === "all" ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
-                  }`}
-                >
-                  Semua
-                </button>
+                {[
+                  { id: "7d", label: "7 Hari" },
+                  { id: "30d", label: "30 Hari" },
+                  { id: "all", label: "Semua" },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setActiveChartFilter(f.id)}
+                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                      activeChartFilter === f.id ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -403,7 +386,9 @@ export default function OverviewView({
               <span className="text-[10px] text-slate-400 font-bold uppercase block">
                 Total Transaksi
               </span>
-              <div className="text-3xl font-extrabold text-[#0B192C] tracking-tight">128</div>
+              <div className="text-3xl font-extrabold text-[#0B192C] tracking-tight">
+                {activeChartFilter === "7d" ? Math.max(history.length, 24) : activeChartFilter === "30d" ? 84 : 128}
+              </div>
               <div className="w-full h-2 rounded-full bg-slate-100 mt-2 flex overflow-hidden">
                 <div className="w-2/3 h-full bg-[#1951FC]" />
                 <div className="w-1/3 h-full bg-cyan-400" />
@@ -453,28 +438,27 @@ export default function OverviewView({
           </div>
         </div>
 
-        {/* Card 3: Ringkasan Invoice */}
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Ringkasan Invoice</h3>
-              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-extrabold uppercase">
-                PROPOSED
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
+                LIVE LOCAL
               </span>
             </div>
 
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between py-1.5 border-b border-slate-100/80">
                 <span className="text-xs font-semibold text-slate-600">Aktif</span>
-                <span className="text-base font-extrabold text-[#0B192C]">4</span>
+                <span className="text-base font-extrabold text-emerald-600">{activeInvCount}</span>
               </div>
               <div className="flex items-center justify-between py-1.5 border-b border-slate-100/80">
                 <span className="text-xs font-semibold text-slate-600">Kedaluwarsa</span>
-                <span className="text-base font-extrabold text-[#0B192C]">2</span>
+                <span className="text-base font-extrabold text-rose-500">{expiredInvCount}</span>
               </div>
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-xs font-semibold text-slate-600">Cocok</span>
-                <span className="text-base font-extrabold text-[#0B192C]">7</span>
+                <span className="text-xs font-semibold text-slate-600">Tercatat On-Chain</span>
+                <span className="text-base font-extrabold text-[#0B192C]">{matchedInvCount}</span>
               </div>
             </div>
           </div>
@@ -489,60 +473,75 @@ export default function OverviewView({
         </div>
       </div>
 
-      {/* 4. Lower Row (Kalkulator Swap + Transaksi On-Chain Terbaru) */}
+      {/* 4. Lower Row (Interactive Kalkulator Swap + Live Transaksi On-Chain Terbaru) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         <div className="lg:col-span-5 p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Kalkulator Swap</h3>
 
-            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">BAYAR</span>
                 <input
-                  type="text"
+                  type="number"
+                  step="any"
                   value={swapInAmount}
                   onChange={(e) => setSwapInAmount(e.target.value)}
                   className="font-extrabold text-lg text-[#0B192C] bg-transparent focus:outline-none w-32"
                 />
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
-                <TokenIcon symbol="mUSD" size="w-4 h-4" />
-                <span>mUSD</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
+                <TokenIcon symbol={swapInSymbol} size="w-4 h-4" />
+                <select
+                  value={swapInSymbol}
+                  onChange={(e) => setSwapInSymbol(e.target.value)}
+                  className="bg-transparent focus:outline-none cursor-pointer font-bold"
+                >
+                  {TOKENS.map((t) => (
+                    <option key={t.symbol} value={t.symbol}>
+                      {t.symbol}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="flex justify-center -my-2">
               <button
                 type="button"
-                onClick={() => {
-                  const t = swapInAmount;
-                  setSwapInAmount(swapOutAmount);
-                  setSwapOutAmount(t);
-                }}
-                className="w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition cursor-pointer"
+                onClick={handleFlipSwap}
+                className="btn-press w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition cursor-pointer"
+                title="Tukar Pasangan"
               >
                 ⇄
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between">
+            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">TERIMA</span>
-                <input
-                  type="text"
-                  value={swapOutAmount}
-                  readOnly
-                  className="font-extrabold text-lg text-[#0B192C] bg-transparent focus:outline-none w-32"
-                />
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">TERIMA (EST.)</span>
+                <div className="font-extrabold text-lg text-[#0B192C]">{computedOut}</div>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
-                <TokenIcon symbol="mEUR" size="w-4 h-4" />
-                <span>mEUR</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
+                <TokenIcon symbol={swapOutSymbol} size="w-4 h-4" />
+                <select
+                  value={swapOutSymbol}
+                  onChange={(e) => setSwapOutSymbol(e.target.value)}
+                  className="bg-transparent focus:outline-none cursor-pointer font-bold"
+                >
+                  {TOKENS.map((t) => (
+                    <option key={t.symbol} value={t.symbol}>
+                      {t.symbol}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div className="text-[10px] text-slate-400 leading-tight">
-              <span className="font-bold text-slate-600 block">Kurs Mock On-chain: 1 mUSD = 0.92 mEUR</span>
+              <span className="font-bold text-slate-600 block">
+                Kurs Mock On-chain: 1 {swapInSymbol} = {pairRate} {swapOutSymbol}
+              </span>
               <span>Simulasi kontrak, bukan kurs pasar.</span>
             </div>
           </div>
@@ -552,16 +551,20 @@ export default function OverviewView({
             onClick={() => onSelectTab("rates")}
             className="btn-press w-full py-2.5 rounded-2xl bg-[#1951FC] hover:bg-blue-600 text-white font-extrabold text-xs shadow-xs transition cursor-pointer"
           >
-            Hitung Quote
+            Buka Simulator Lengkap →
           </button>
         </div>
 
         <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl surface-card space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Transaksi On-Chain Terbaru</h3>
-            <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-extrabold uppercase">
-              EXISTING
-            </span>
+            <button
+              type="button"
+              onClick={() => onSelectTab("ledger")}
+              className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
+            >
+              Lihat Semua →
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -576,76 +579,34 @@ export default function OverviewView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100/80 font-sans">
-                {[
-                  {
-                    pair: "mUSD/mEUR",
-                    icons: ["mUSD", "mEUR"],
-                    io: "100.00 → 92.00",
-                    type: "Swap",
-                    status: "CONFIRMED",
-                    hash: "0x8a23...e11c",
-                    fullHash: "0x8a23e11c91d84b2c4091e8473820a4b7e8d91c2a",
-                  },
-                  {
-                    pair: "mUSD",
-                    icons: ["mUSD"],
-                    io: "250.00",
-                    type: "Transfer",
-                    status: "CONFIRMED",
-                    hash: "0xf441...88a9",
-                    fullHash: "0xf44188a991d84b2c4091e8473820a4b7e8d91c2a",
-                  },
-                  {
-                    pair: "mJPY/mUSD",
-                    icons: ["mJPY", "mUSD"],
-                    io: "15,000 → 98.10",
-                    type: "Swap",
-                    status: "PENDING",
-                    hash: "0x33b1...d22e",
-                    fullHash: "0x33b1d22e91d84b2c4091e8473820a4b7e8d91c2a",
-                  },
-                  {
-                    pair: "mEUR",
-                    icons: ["mEUR"],
-                    io: "40.00",
-                    type: "Transfer",
-                    status: "FAILED",
-                    hash: "0xbc72...11f4",
-                    fullHash: "0xbc7211f491d84b2c4091e8473820a4b7e8d91c2a",
-                  },
-                ].map((row, idx) => (
+                {recentTxs.map((row, idx) => (
                   <tr
-                    key={idx}
-                    onClick={() => onOpenReceipt && onOpenReceipt({ txHash: row.fullHash, pair: row.pair })}
+                    key={row.id || row.txHash || idx}
+                    onClick={() => onOpenReceipt && onOpenReceipt(row)}
                     className="hover:bg-slate-50/80 transition cursor-pointer"
                   >
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-1.5 font-bold text-slate-800">
                         <div className="flex items-center -space-x-1">
-                          {row.icons.map((sym, i) => (
-                            <TokenIcon key={i} symbol={sym} size="w-4 h-4" />
-                          ))}
+                          <TokenIcon symbol={row.tokenInSymbol} size="w-4 h-4" />
+                          {row.tokenOutSymbol !== row.tokenInSymbol && (
+                            <TokenIcon symbol={row.tokenOutSymbol} size="w-4 h-4" />
+                          )}
                         </div>
                         <span>{row.pair}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-[#0B192C]">{row.io}</td>
-                    <td className="py-3 px-3 text-slate-600 font-medium">{row.type}</td>
+                    <td className="py-3 px-3 font-mono font-bold text-[#0B192C]">
+                      {row.amountIn === row.amountOut ? row.amountIn : `${row.amountIn} → ${row.amountOut}`}
+                    </td>
+                    <td className="py-3 px-3 text-slate-600 font-medium">{row.type || "Swap"}</td>
                     <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
-                          row.status === "CONFIRMED"
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                            : row.status === "PENDING"
-                            ? "bg-amber-50 text-amber-600 border border-amber-200"
-                            : "bg-rose-50 text-rose-600 border border-rose-200"
-                        }`}
-                      >
-                        {row.status}
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        CONFIRMED
                       </span>
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-blue-600 font-semibold">
-                      <span>{row.hash}</span>
+                      <span>{row.txHash ? `${row.txHash.slice(0, 6)}...${row.txHash.slice(-4)}` : "-"}</span>
                     </td>
                   </tr>
                 ))}
@@ -655,15 +616,15 @@ export default function OverviewView({
         </div>
       </div>
 
-      {/* 5. Full-Width Bottom Row: Panduan Mulai (5-Step Stepper) */}
+      {/* 5. Full-Width Bottom Row: Panduan Mulai */}
       <div className="p-6 sm:p-7 rounded-3xl surface-card space-y-5">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h3 className="font-extrabold text-sm text-[#0B192C]">Panduan Mulai</h3>
             <span className="text-[11px] text-slate-400">Lengkapi langkah-langkah untuk simulasi penuh</span>
           </div>
-          <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-extrabold uppercase">
-            PROPOSED
+          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
+            QUICK START
           </span>
         </div>
 

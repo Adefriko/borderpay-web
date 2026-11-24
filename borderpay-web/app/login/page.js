@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthLandingView from "../../components/AuthLandingView";
 import { useToast } from "../../components/ToastContext";
-import { getActiveSession, findUserByAddress } from "../../lib/auth";
+import { getActiveSession } from "../../lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +40,10 @@ export default function LoginPage() {
   };
 
   const handleContinueAsGuest = () => {
-    toast.info("Mode Eksplorasi", "Melanjutkan ke Dashboard...");
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("borderpay_guest_mode", "1");
+    }
+    toast.info("Mode Eksplorasi", "Melanjutkan ke Overview Panel...");
     router.push("/");
   };
 

@@ -1,59 +1,86 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { TOKENS, CONTRACT_ADDRESSES, ERC20_ABI } from "../constants/contracts";
-import { TokenIcon, IconCopy, IconCheck, IconExternalLink } from "./Icons";
+import { TOKENS, CONTRACT_ADDRESSES, ERC20_ABI, SEPOLIA_CHAIN_ID } from "../constants/contracts";
+import { TokenIcon, IconCopy, IconCheck, IconExternalLink, IconRefresh } from "./Icons";
+import { useToast } from "./ToastContext";
 
 export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
-  const [balances, setBalances] = useState({});
-  const [ethBalance, setEthBalance] = useState("0.0");
+  const toast = useToast();
+  const [balances, setBalances] = useState({
+    mUSD: "10,000.00",
+    mEUR: "10,000.00",
+    mJPY: "1.0M",
+  });
+  const [ethBalance, setEthBalance] = useState("0.4821");
+  const [chainId, setChainId] = useState(SEPOLIA_CHAIN_ID);
   const [loading, setLoading] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState("");
   const [addedTokens, setAddedTokens] = useState({});
 
-  useEffect(() => {
-    if (!isOpen || !walletAddress) return;
+  const fetchAllBalances = useCallback(async () => {
+    if (!walletAddress || typeof window === "undefined" || !window.ethereum) return;
+    setLoading(true);
+    try {
+      const chain = await window.ethereum.request({ method: "eth_chainId" });
+      setChainId(chain || SEPOLIA_CHAIN_ID);
 
-    const fetchAllBalances = async () => {
-      setLoading(true);
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const ethBal = await provider.getBalance(walletAddress);
+      setEthBalance(parseFloat(ethers.formatEther(ethBal)).toFixed(4));
 
-        const ethBal = await provider.getBalance(walletAddress);
-        setEthBalance(parseFloat(ethers.formatEther(ethBal)).toFixed(4));
-
-        const newBals = {};
-        for (const token of TOKENS) {
-          try {
-            const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-            const bal = await contract.balanceOf(walletAddress);
-            newBals[token.symbol] = parseFloat(ethers.formatUnits(bal, 18)).toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 4,
-            });
-          } catch (err) {
-            newBals[token.symbol] = "0.00";
-          }
+      const newBals = {};
+      for (const token of TOKENS) {
+        try {
+          const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+          const bal = await contract.balanceOf(walletAddress);
+          newBals[token.symbol] = parseFloat(ethers.formatUnits(bal, 18)).toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        } catch {
+          newBals[token.symbol] = "0.00";
         }
-        setBalances(newBals);
-      } catch (err) {
-        console.error("Gagal load balances:", err);
-      } finally {
-        setLoading(false);
       }
-    };
+      setBalances(newBals);
+    } catch (err) {
+      console.error("Gagal load balances:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [walletAddress]);
 
-    fetchAllBalances();
-  }, [isOpen, walletAddress]);
+  useEffect(() => {
+    if (isOpen && walletAddress) {
+      fetchAllBalances();
+    }
+  }, [isOpen, walletAddress, fetchAllBalances]);
+
+  const switchToSepolia = async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+      fetchAllBalances();
+    } catch (err) {
+      toast.error("Gagal Ganti Jaringan", err.message);
+    }
+  };
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
     setCopiedAddress(id);
+    toast.info("Alamat Tersalin", text);
     setTimeout(() => setCopiedAddress(""), 2000);
   };
 
   const addTokenToMetaMask = async (token) => {
-    if (!window.ethereum) return alert("MetaMask tidak terdeteksi");
+    if (!window.ethereum) {
+      toast.error("MetaMask Tidak Terdeteksi", "Pasang ekstensi MetaMask terlebih dahulu.");
+      return;
+    }
     try {
       const wasAdded = await window.ethereum.request({
         method: "wallet_watchAsset",
@@ -68,6 +95,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
       });
       if (wasAdded) {
         setAddedTokens((prev) => ({ ...prev, [token.symbol]: true }));
+        toast.success(`${token.symbol} Ditambahkan`, `${token.symbol} ditambahkan ke MetaMask.`);
       }
     } catch (error) {
       console.error(error);
@@ -76,123 +104,236 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
 
   if (!isOpen) return null;
 
+  const isWrongNetwork = walletAddress && chainId.toLowerCase() !== SEPOLIA_CHAIN_ID.toLowerCase();
+  const isLowEth = parseFloat(ethBalance || "0") < 0.002;
+  const shortWallet = walletAddress
+    ? `${walletAddress.slice(0, 6)}..${walletAddress.slice(-4)}`
+    : "0x3B1d..8eA0";
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-6 text-slate-800 animate-modal-pop">
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 text-slate-800 animate-modal-pop max-h-[90vh] overflow-y-auto">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 text-lg shadow-2xs">
-              💳
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-extrabold text-sm">
+              ⊞
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#0B192C]">Dompet & Saldo Simulasi</h3>
-              <p className="text-xs text-slate-500">Ethereum Sepolia Testnet</p>
+              <h3 className="text-base font-extrabold text-[#0B192C]">Dompet & Saldo Simulasi</h3>
+              <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                <span>Ethereum Sepolia Testnet</span>
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="btn-press w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
+            className="btn-press w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
           >
             ✕
           </button>
         </div>
 
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <TokenIcon symbol="ETH" size="w-9 h-9" />
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Sepolia Gas Balance (ETH)</p>
-              <p className="text-lg font-bold font-mono text-[#0B192C]">
-                {loading ? "..." : `${ethBalance} ETH`}
-              </p>
-            </div>
+        {/* Status Bar & Refresh (Matched to Figma Image 7) */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold">
+              ● {walletAddress ? "WALLET TERHUBUNG" : "DEMO PREVIEW"}
+            </span>
+            <button
+              type="button"
+              onClick={() => walletAddress && copyToClipboard(walletAddress, "wallet")}
+              className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-mono font-bold text-[#0B192C] flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <span>{shortWallet}</span>
+              {copiedAddress === "wallet" ? (
+                <IconCheck className="w-3 h-3 text-emerald-600" />
+              ) : (
+                <IconCopy className="w-3 h-3 text-slate-500" />
+              )}
+            </button>
           </div>
-          <a
-            href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
+
+          <button
+            type="button"
+            onClick={fetchAllBalances}
+            disabled={loading}
+            className="text-xs font-bold text-slate-600 hover:text-blue-600 flex items-center gap-1.5 transition cursor-pointer"
           >
-            <span>Faucet ETH</span>
-            <IconExternalLink className="w-3 h-3" />
-          </a>
+            <span>Refresh Saldo</span>
+            <IconRefresh className="w-3.5 h-3.5" isSpinning={loading} />
+          </button>
         </div>
 
-        <div className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Token Simulasi Multi-Valuta (ERC-20)
-          </h4>
+        {/* Wrong Network Alert */}
+        {isWrongNetwork && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-between gap-3 text-xs">
+            <span className="font-bold text-rose-700">Wallet tidak berada di Sepolia Testnet.</span>
+            <button
+              type="button"
+              onClick={switchToSepolia}
+              className="btn-press px-3.5 py-1.5 rounded-xl bg-[#1951FC] text-white font-bold cursor-pointer"
+            >
+              Ganti ke Sepolia
+            </button>
+          </div>
+        )}
 
-          <div className="space-y-2.5">
-            {TOKENS.map((t) => (
+        {/* Vibrant Blue Sepolia Gas Banner (Matched 1:1 to Figma Image 7) */}
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-[#1951FC] via-[#1c59ff] to-[#0a82d9] text-white shadow-lg shadow-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-100 block">
+              SEPOLIA GAS BALANCE (ETH)
+            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight">
+                {loading ? "..." : ethBalance}
+              </span>
+              <span className="text-sm font-bold text-blue-100">ETH</span>
+            </div>
+            <p className="text-[11px] text-blue-100/90">
+              ETH Sepolia Testnet — hanya untuk gas, tidak memiliki nilai nyata.
+            </p>
+          </div>
+
+          <div className="flex sm:flex-col items-end justify-between gap-2">
+            <span className="px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-[10px] font-bold backdrop-blur-md">
+              Ethereum Sepolia Testnet
+            </span>
+            <a
+              href="https://cloud.google.com/application/web3/faucet/ethereum/sepolia"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-press px-4 py-2 rounded-xl bg-white hover:bg-blue-50 text-[#1951FC] text-xs font-extrabold shadow-xs transition flex items-center gap-1.5"
+            >
+              <span>Faucet ETH</span>
+              <IconExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+
+        {isLowEth && walletAddress && (
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+            ⚠️ Test ETH tidak cukup untuk biaya gas. Ambil ETH gratis dari faucet Sepolia di atas.
+          </div>
+        )}
+
+        {/* 3-Column Mock Token Cards Grid (Matched 1:1 to Figma Image 7) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {TOKENS.map((t) => {
+            const shortBadge = t.symbol.slice(0, 2);
+            const badgeBg =
+              t.symbol === "mUSD"
+                ? "bg-[#1951FC]"
+                : t.symbol === "mEUR"
+                ? "bg-teal-500"
+                : "bg-indigo-600";
+
+            return (
               <div
                 key={t.address}
-                className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-blue-400 transition flex items-center justify-between gap-4"
+                className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:border-blue-300 transition flex flex-col justify-between space-y-3"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <TokenIcon symbol={t.symbol} size="w-8 h-8" />
-                  <div className="truncate">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-[#0B192C] text-sm">{t.symbol}</span>
-                      <span className="text-xs text-slate-500 truncate">({t.name})</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] font-mono text-slate-500 truncate">
-                        {t.address.slice(0, 6)}...{t.address.slice(-4)}
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(t.address, t.symbol)}
-                        className="text-slate-400 hover:text-slate-700 transition cursor-pointer"
-                        title="Salin Alamat Token"
-                      >
-                        {copiedAddress === t.symbol ? (
-                          <IconCheck className="w-3 h-3 text-emerald-500" />
-                        ) : (
-                          <IconCopy className="w-3 h-3" />
-                        )}
-                      </button>
-                    </div>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-6 h-6 rounded-full ${badgeBg} text-white text-[10px] font-extrabold flex items-center justify-center`}>
+                      {shortBadge}
+                    </span>
+                    <span className="font-extrabold text-xs text-[#0B192C]">{t.name}</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-extrabold uppercase">
+                    MOCK
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[9px] font-bold uppercase text-slate-400 block">
+                    SALDO CONTOH
+                  </span>
+                  <div className="text-base font-extrabold text-[#0B192C] font-mono mt-0.5">
+                    {loading ? "..." : balances[t.symbol] || "0.00"} {t.symbol}
                   </div>
                 </div>
 
-                <div className="text-right flex-shrink-0 flex flex-col items-end gap-1.5">
-                  <span className="font-mono font-bold text-sm text-[#0B192C]">
-                    {loading ? "..." : balances[t.symbol] || "0.00"}
-                  </span>
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                    <span>{t.address.slice(0, 6)}..{t.address.slice(-4)}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(t.address, t.symbol)}
+                      className="text-slate-400 hover:text-blue-600 cursor-pointer"
+                    >
+                      {copiedAddress === t.symbol ? (
+                        <IconCheck className="w-3 h-3 text-emerald-500" />
+                      ) : (
+                        <IconCopy className="w-3 h-3" />
+                      )}
+                    </button>
+                  </div>
+
                   <button
+                    type="button"
                     onClick={() => addTokenToMetaMask(t)}
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition flex items-center gap-1 cursor-pointer"
-                    title="Tambahkan token ini ke MetaMask"
+                    className="btn-press w-full py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-700 transition cursor-pointer"
                   >
-                    <span>🦊</span>
-                    <span>{addedTokens[t.symbol] ? "Ditambahkan" : "+ ke MetaMask"}</span>
+                    {addedTokens[t.symbol] ? "✓ Ditambahkan" : "Tambah ke MetaMask"}
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-          <div className="flex justify-between items-center">
-            <span>Kontrak Gateway (CoinSwapPayment):</span>
+        {/* Footer Gateway Bar */}
+        <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-extrabold uppercase text-slate-400">
+              GATEWAY CONTRACT
+            </span>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(CONTRACT_ADDRESSES.CoinSwapPayment, "gateway")}
+              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 font-mono text-[11px] font-bold text-slate-700 flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>
+                {CONTRACT_ADDRESSES.CoinSwapPayment.slice(0, 6)}..
+                {CONTRACT_ADDRESSES.CoinSwapPayment.slice(-4)}
+              </span>
+              {copiedAddress === "gateway" ? (
+                <IconCheck className="w-3 h-3 text-emerald-500" />
+              ) : (
+                <IconCopy className="w-3 h-3" />
+              )}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
             <a
               href={`https://sepolia.etherscan.io/address/${CONTRACT_ADDRESSES.CoinSwapPayment}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 font-mono flex items-center gap-1"
+              className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
             >
-              <span>
-                {CONTRACT_ADDRESSES.CoinSwapPayment.slice(0, 6)}...
-                {CONTRACT_ADDRESSES.CoinSwapPayment.slice(-4)}
-              </span>
+              <span>Lihat di Etherscan</span>
               <IconExternalLink className="w-3 h-3" />
             </a>
+            <button
+              type="button"
+              onClick={fetchAllBalances}
+              disabled={loading}
+              className="btn-press px-4 py-2 rounded-xl bg-[#1951FC] hover:bg-blue-600 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+            >
+              Segarkan Saldo
+            </button>
           </div>
-          <p className="text-[11px] text-slate-500">
-            Aset di atas adalah token simulasi non-komersial di Ethereum Sepolia.
-          </p>
         </div>
+
+        <p className="text-[10px] text-slate-400 text-center italic">
+          Simulasi akademik. Token mUSD, mEUR, dan mJPY adalah mock token di Sepolia Testnet, bukan mata uang nyata.
+        </p>
       </div>
     </div>
   );
