@@ -460,63 +460,119 @@ export default function Home() {
     );
   }
 
+  const isOceanHero =
+    activeTab === "overview" ||
+    activeTab === "dashboard" ||
+    activeTab === "terminal" ||
+    activeTab === "create" ||
+    activeTab === "settings";
+
   return (
     <div className="min-h-screen text-[#0B192C] flex flex-col relative selection:bg-blue-600 selection:text-white">
-      {/* Background with fluid turquoise refraction glass atmosphere matching Figma */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#f0f6f8] overflow-hidden">
-        {/* Upper rich ocean turquoise atmosphere across the top 480px */}
-        <div 
-          className="absolute top-0 inset-x-0 h-[500px] w-full"
-          style={{
-            background: "linear-gradient(180deg, #3aa7c4 0%, #4db5cf 28%, #72c6da 55%, #aee3ed 78%, #e4f5f8 92%, #f0f6f8 100%)",
-          }}
-        />
-
-        {/* 3D fluid glass refraction curves with golden caustics */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[1500px] h-[520px] pointer-events-none opacity-85">
-          <svg className="w-full h-full" viewBox="0 0 1500 520" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M-100 80 Q 250 -40, 650 60 T 1400 30 Q 1600 200, 1450 340 T 700 310 Q 200 420, -100 280 Z"
-              fill="url(#glass-wave-grad)"
-              filter="url(#wave-blur)"
+      {/* Background matched to Figma 3D glass atmosphere */}
+      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#eef4f8] overflow-hidden">
+        {isOceanHero ? (
+          <>
+            {/* Rich deep teal-to-ice-cyan backdrop spanning the top hero zone */}
+            <div
+              className="absolute top-0 inset-x-0 h-[470px] w-full"
+              style={{
+                background:
+                  "linear-gradient(180deg, #0b4c69 0%, #157393 22%, #2b97b7 48%, #5cbcd3 72%, #b5e4ef 89%, #eef4f8 100%)",
+              }}
             />
-            {/* Golden caustic rim reflection line matching Figma */}
-            <path
-              d="M-50 90 Q 280 -20, 680 75 T 1420 40"
-              stroke="url(#gold-caustic)"
-              strokeWidth="4"
-              strokeLinecap="round"
-              opacity="0.7"
-              filter="blur(1px)"
-            />
-            <defs>
-              <linearGradient id="glass-wave-grad" x1="0" y1="0" x2="1500" y2="400" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#1e9cb8" stopOpacity="0.45" />
-                <stop offset="0.35" stopColor="#3ac8e5" stopOpacity="0.65" />
-                <stop offset="0.7" stopColor="#168fae" stopOpacity="0.5" />
-                <stop offset="1" stopColor="#55d4ee" stopOpacity="0.3" />
-              </linearGradient>
-              <linearGradient id="gold-caustic" x1="0" y1="0" x2="1400" y2="0" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#f59e0b" stopOpacity="0.2" />
-                <stop offset="0.3" stopColor="#fde047" stopOpacity="0.8" />
-                <stop offset="0.6" stopColor="#f59e0b" stopOpacity="0.7" />
-                <stop offset="1" stopColor="#38bdf8" stopOpacity="0.4" />
-              </linearGradient>
-              <filter id="wave-blur" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="30" />
-              </filter>
-            </defs>
-          </svg>
-        </div>
 
-        <div className="absolute top-10 right-[-120px] w-[600px] h-[400px] bg-gradient-to-bl from-[#76d3e8]/45 via-[#27a8c7]/25 to-transparent blur-3xl rounded-full pointer-events-none" />
-        <div className="absolute top-20 left-[-150px] w-[650px] h-[400px] bg-gradient-to-tr from-[#1b97b6]/35 via-[#51c0d9]/25 to-transparent blur-3xl rounded-full pointer-events-none" />
+            {/* Crisp high-contrast 3D liquid glass ribbons & spheres behind hero glass panels so backdrop-blur refracts visible color & light */}
+            <svg
+              className="absolute -top-12 left-1/2 -translate-x-1/2 w-[1600px] h-[520px] pointer-events-none"
+              viewBox="0 0 1600 520"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              preserveAspectRatio="xMidYMid slice"
+            >
+              {/* Deep cobalt curved fluid ribbon */}
+              <path
+                d="M-60 220 C 180 20, 460 360, 780 180 C 1060 20, 1280 290, 1660 110 L 1660 390 C 1280 490, 1020 270, 760 380 C 440 510, 180 220, -60 390 Z"
+                fill="url(#figma-ribbon-cobalt)"
+                opacity="0.92"
+              />
+              {/* Translucent aqua inner glass fold */}
+              <path
+                d="M80 90 C 320 260, 560 40, 860 230 C 1100 380, 1340 120, 1580 240"
+                stroke="url(#figma-glass-fold)"
+                strokeWidth="84"
+                strokeLinecap="round"
+                opacity="0.55"
+              />
+              {/* Glossy cyan glass torus arcs on left & right behind frosted cards */}
+              <circle cx="240" cy="185" r="145" fill="url(#figma-orb-left)" opacity="0.82" />
+              <circle cx="1320" cy="175" r="155" fill="url(#figma-orb-right)" opacity="0.78" />
+              {/* Warm golden caustic rim highlight (seen in Figma Create QR & Overview background) */}
+              <path
+                d="M120 112 C 360 18, 620 210, 920 98 C 1180 4, 1390 140, 1560 72"
+                stroke="url(#figma-gold-rim)"
+                strokeWidth="5"
+                strokeLinecap="round"
+                opacity="0.78"
+              />
+              <path
+                d="M-40 245 C 220 110, 510 340, 810 195"
+                stroke="rgba(255,255,255,0.45)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <defs>
+                <linearGradient id="figma-ribbon-cobalt" x1="0" y1="60" x2="1550" y2="380" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#054e78" />
+                  <stop offset="0.32" stopColor="#0677a6" />
+                  <stop offset="0.62" stopColor="#1fa6cb" />
+                  <stop offset="1" stopColor="#085380" />
+                </linearGradient>
+                <linearGradient id="figma-glass-fold" x1="80" y1="90" x2="1580" y2="240" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#5eead4" stopOpacity="0.35" />
+                  <stop offset="0.45" stopColor="#38bdf8" stopOpacity="0.85" />
+                  <stop offset="1" stopColor="#1951FC" stopOpacity="0.45" />
+                </linearGradient>
+                <radialGradient id="figma-orb-left" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(210 140) rotate(45) scale(210)">
+                  <stop stopColor="#67e8f9" />
+                  <stop offset="0.5" stopColor="#0284c7" />
+                  <stop offset="1" stopColor="#082f49" stopOpacity="0.2" />
+                </radialGradient>
+                <radialGradient id="figma-orb-right" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1280 130) rotate(50) scale(220)">
+                  <stop stopColor="#a5f3fc" />
+                  <stop offset="0.48" stopColor="#0ea5e9" />
+                  <stop offset="1" stopColor="#0c4a6e" stopOpacity="0.15" />
+                </radialGradient>
+                <linearGradient id="figma-gold-rim" x1="120" y1="70" x2="1500" y2="110" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#fde047" stopOpacity="0.1" />
+                  <stop offset="0.25" stopColor="#facc15" stopOpacity="0.9" />
+                  <stop offset="0.55" stopColor="#f59e0b" stopOpacity="0.65" />
+                  <stop offset="0.85" stopColor="#bae6fd" stopOpacity="0.8" />
+                  <stop offset="1" stopColor="#38bdf8" stopOpacity="0.1" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </>
+        ) : (
+          /* Soft atmospheric cyan halo for Rates & Ledger views (Figma Images 4 & 5) */
+          <>
+            <div
+              className="absolute top-0 inset-x-0 h-[360px] w-full"
+              style={{
+                background:
+                  "radial-gradient(90% 100% at 25% 0%, rgba(165, 226, 242, 0.55) 0%, rgba(215, 240, 248, 0.45) 45%, rgba(238, 244, 248, 0) 100%)",
+              }}
+            />
+            <div className="absolute -top-20 right-0 w-[620px] h-[340px] rounded-full bg-sky-200/45 blur-3xl" />
+          </>
+        )}
       </div>
 
       {/* Floating Top Navigation Bar (Matching Figma Design) */}
       <TopNavbar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        isOceanHeader={isOceanHero}
         walletAddress={walletAddress}
         onConnectWallet={connectWallet}
         onDisconnectWallet={handleLogout}

@@ -22,12 +22,12 @@ export default function SettingsView({ currentUser, walletAddress, onOpenAuthMod
 
   return (
     <div className="space-y-6 text-[#0B192C]">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B192C]">
+      {/* Header (Crisp White over Ocean 3D Glass Backdrop matching Figma Image 13) */}
+      <div className="pt-1 text-center sm:text-left">
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_10px_rgba(3,30,60,0.22)]">
           Pengaturan & Konfigurasi
         </h2>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <p className="text-xs sm:text-sm text-white/85 font-medium mt-0.5">
           Sesuaikan preferensi antarmuka, notifikasi, profil toko, dan koneksi Sepolia.
         </p>
       </div>

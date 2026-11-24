@@ -66,12 +66,12 @@ export default function CreateQrView({
 
   return (
     <div className="space-y-6 text-[#0B192C]">
-      {/* 1. Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] tracking-tight">
+      {/* 1. Header (Crisp White Typography over Ocean 3D Glass Ribbon) */}
+      <div className="pt-1">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-[0_2px_10px_rgba(3,30,60,0.22)]">
           Buat Invoice QR
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        <p className="text-xs sm:text-sm text-white/85 font-medium mt-0.5">
           Susun permintaan pembayaran mock-token dan bagikan sebagai QR di Ethereum Sepolia Testnet.
         </p>
       </div>
@@ -79,8 +79,8 @@ export default function CreateQrView({
       {/* 2. Main 2-Column Grid matching Figma Image 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Column: Form Card (7 Cols, Frosted Glass) */}
-        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl glass-panel-hero space-y-5">
+        {/* Left Column: Form Card (7 Cols, Frosted Translucent Glass Top -> White Bottom) */}
+        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl glass-create-form space-y-5">
           <form onSubmit={onGenerate} className="space-y-4">
             
             {/* Alamat Penerima */}
@@ -262,20 +262,20 @@ export default function CreateQrView({
             </div>
           </div>
 
-          {/* Metadata Rows */}
-          <div className="space-y-2 py-3 border-y border-white/15 text-xs text-blue-100">
+          {/* Metadata Rows inside Frosted Glass Inset Box */}
+          <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 space-y-2 text-xs text-blue-100">
             <div className="flex justify-between">
-              <span className="text-blue-200/70">Penerima</span>
+              <span className="text-blue-200/75">Penerima</span>
               <span className="font-mono font-bold text-white truncate max-w-[200px]">
                 {shortReceiver}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-blue-200/70">Invoice ID</span>
+              <span className="text-blue-200/75">Invoice ID</span>
               <span className="font-mono text-white">{shortOrderId}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-blue-200/70">Memo</span>
+              <span className="text-blue-200/75">Memo</span>
               <span className="text-white font-medium truncate max-w-[200px]">
                 {memo || "Pembayaran pesanan #A-024"}
               </span>

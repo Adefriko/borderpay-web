@@ -22,6 +22,7 @@ import {
 export default function TopNavbar({
   activeTab = "overview",
   onSelectTab,
+  isOceanHeader = true,
   walletAddress = "",
   onConnectWallet,
   onDisconnectWallet,
@@ -75,36 +76,37 @@ export default function TopNavbar({
   const isSettingsActive = activeTab === "settings";
 
   return (
-    <header className="sticky top-0 z-40 w-full pt-3 px-3 sm:px-6 max-w-[1560px] mx-auto pointer-events-none">
-      <div className="pointer-events-auto glass-pill-nav rounded-full px-4 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-4 transition-all">
+    <header className="sticky top-0 z-40 w-full pt-3.5 px-3 sm:px-6 max-w-[1560px] mx-auto pointer-events-none">
+      <div className="pointer-events-auto flex items-center justify-between gap-2 sm:gap-4 transition-all">
         
-        {/* Left: Brand Logo Pill */}
+        {/* Left: Floating White Brand Pill (Clicking goes straight to Overview) */}
         <button
           type="button"
           onClick={() => onSelectTab && onSelectTab("overview")}
-          className="btn-press flex items-center gap-2.5 px-2.5 py-1 rounded-full hover:bg-white/60 transition cursor-pointer flex-shrink-0 group"
+          className="btn-press flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white/95 backdrop-blur-xl border border-white shadow-sm hover:shadow-md transition cursor-pointer flex-shrink-0 group"
           title="Kembali ke Dashboard Overview"
         >
-          <IconBorderPayMark className="w-8 h-8 rounded-xl shadow-xs group-hover:scale-105 transition-transform" />
-          <div className="text-left hidden xs:block">
-            <span className="font-extrabold text-base tracking-tight text-[#0B192C] block leading-none">
-              BorderPay
-            </span>
-            <span className="text-[10px] font-bold text-slate-500 block leading-tight mt-0.5">
-              Web3 Payment
-            </span>
-          </div>
+          <IconBorderPayMark className="w-7 h-7 rounded-lg shadow-2xs group-hover:scale-105 transition-transform" />
+          <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0B192C] hidden xs:inline">
+            BorderPay
+          </span>
         </button>
 
-        {/* Center: Floating Navigation Pills */}
-        <nav className="hidden md:flex items-center gap-1 p-1 bg-white/40 backdrop-blur-md border border-white/60 rounded-full shadow-inner">
+        {/* Center: Floating Translucent Glass Navigation Capsule */}
+        <nav
+          className={`hidden md:flex items-center gap-1 p-1.5 rounded-full transition-all ${
+            isOceanHeader ? "glass-nav-ocean" : "glass-nav-light"
+          }`}
+        >
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab("overview")}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isOverviewActive
-                ? "bg-white/95 text-[#0B192C] shadow-xs"
-                : "text-slate-700 hover:text-slate-900 hover:bg-white/60"
+                ? "bg-white text-[#0B192C] shadow-sm"
+                : isOceanHeader
+                ? "text-white/90 hover:text-white hover:bg-white/15"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
             }`}
           >
             <IconDashboard className="w-3.5 h-3.5" />
@@ -116,8 +118,12 @@ export default function TopNavbar({
             onClick={() => onSelectTab && onSelectTab("terminal")}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isCreateActive
-                ? "bg-[#1951FC] text-white shadow-xs"
-                : "text-slate-700 hover:text-slate-900 hover:bg-white/60"
+                ? isOceanHeader
+                  ? "bg-white text-[#0B192C] shadow-sm"
+                  : "bg-[#1951FC] text-white shadow-sm"
+                : isOceanHeader
+                ? "text-white/90 hover:text-white hover:bg-white/15"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
             }`}
           >
             <IconQrCode className="w-3.5 h-3.5" />
@@ -127,7 +133,11 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => onOpenScanner && onOpenScanner()}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-white/70 transition-all cursor-pointer"
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              isOceanHeader
+                ? "text-white/90 hover:text-white hover:bg-white/15"
+                : "text-slate-600 hover:text-blue-600 hover:bg-slate-100/70"
+            }`}
           >
             <IconScan className="w-3.5 h-3.5" />
             <span>Scan & Pay</span>
@@ -138,8 +148,12 @@ export default function TopNavbar({
             onClick={() => onSelectTab && onSelectTab("rates")}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isRatesActive
-                ? "bg-white/95 text-[#0B192C] shadow-xs"
-                : "text-slate-700 hover:text-slate-900 hover:bg-white/60"
+                ? isOceanHeader
+                  ? "bg-white text-[#0B192C] shadow-sm"
+                  : "bg-slate-900 text-white shadow-sm"
+                : isOceanHeader
+                ? "text-white/90 hover:text-white hover:bg-white/15"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
             }`}
           >
             <IconSwap className="w-3.5 h-3.5" />
@@ -151,8 +165,12 @@ export default function TopNavbar({
             onClick={() => onSelectTab && onSelectTab("ledger")}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isLedgerActive
-                ? "bg-white/95 text-[#0B192C] shadow-xs"
-                : "text-slate-700 hover:text-slate-900 hover:bg-white/60"
+                ? isOceanHeader
+                  ? "bg-white text-[#0B192C] shadow-sm"
+                  : "bg-slate-900 text-white shadow-sm"
+                : isOceanHeader
+                ? "text-white/90 hover:text-white hover:bg-white/15"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
             }`}
           >
             <IconLedger className="w-3.5 h-3.5" />
@@ -160,11 +178,15 @@ export default function TopNavbar({
           </button>
         </nav>
 
-        {/* Right Cluster: Network, Wallet, Notifications, Avatar */}
-        <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+        {/* Right Cluster: Translucent Pill with Network, Wallet, Notifications, Avatar */}
+        <div
+          className={`flex items-center gap-2 p-1.5 rounded-full flex-shrink-0 transition-all ${
+            isOceanHeader ? "glass-nav-ocean" : "glass-nav-light"
+          }`}
+        >
           
           {/* Sepolia Testnet Pill */}
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50/90 border border-emerald-200/80 text-[11px] font-bold text-emerald-700 shadow-2xs">
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-white text-[11px] font-extrabold text-emerald-700 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>SEPOLIA</span>
           </div>
@@ -197,7 +219,11 @@ export default function TopNavbar({
             <button
               type="button"
               onClick={() => setShowNotifications(!showNotifications)}
-              className="btn-press relative p-2 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition cursor-pointer"
+              className={`btn-press relative p-2 rounded-full transition cursor-pointer ${
+                isOceanHeader
+                  ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
+              }`}
               title="Notifikasi"
             >
               <IconBell className="w-4 h-4" />
