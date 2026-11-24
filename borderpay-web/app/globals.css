@@ -281,30 +281,32 @@ code, kbd, samp, pre {
 }
 
 /* Specular Diagonal Glass Sheen triggered on hover */
-.glass-sheen-hover {
-  position: relative;
-  overflow: hidden;
-}
-.glass-sheen-hover::before {
-  content: "";
-  position: absolute;
-  top: -20%;
-  left: -130%;
-  width: 65%;
-  height: 150%;
-  background: linear-gradient(
-    105deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.24) 50%,
-    transparent 80%
-  );
-  transform: skewX(-18deg);
-  transition: left 0.72s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-  z-index: 5;
-}
-.glass-sheen-hover:hover::before {
-  left: 145%;
+@layer components {
+  .glass-sheen-hover {
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-sheen-hover::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    left: -130%;
+    width: 65%;
+    height: 150%;
+    background: linear-gradient(
+      105deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.24) 50%,
+      transparent 80%
+    );
+    transform: skewX(-18deg);
+    transition: left 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .glass-sheen-hover:hover::before {
+    left: 145%;
+  }
 }
 
 /* Interactive Card & Tile Utilities */
@@ -329,24 +331,26 @@ code, kbd, samp, pre {
 }
 
 /* Tactile Button Press Feedback */
-.btn-press {
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s ease, filter 0.12s ease;
-  user-select: none;
-}
-.btn-press:active {
-  transform: scale(0.95);
-  filter: brightness(0.96);
-}
-.btn-press:active::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgba(255, 255, 255, 0.25);
-  animation: rippleFlash 0.25s ease-out;
-  pointer-events: none;
+@layer components {
+  .btn-press {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s ease, filter 0.12s ease;
+    user-select: none;
+  }
+  .btn-press:active {
+    transform: scale(0.95);
+    filter: brightness(0.96);
+  }
+  .btn-press:active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: rgba(255, 255, 255, 0.25);
+    animation: rippleFlash 0.25s ease-out;
+    pointer-events: none;
+  }
 }
 
 /* Light Glass Panel */

@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
 import { TOKENS } from "../constants/contracts";
 import { getLocalInvoices } from "../lib/invoiceStore";
 import {
@@ -20,9 +19,9 @@ const SIMULATED_RATES = {
 };
 
 const HERO_NODES = [
-  { symbol: "mUSD", mark: "$", quoteTo: "mEUR", badgeClass: "bg-[#1951FC]" },
-  { symbol: "mEUR", mark: "€", quoteTo: "mUSD", badgeClass: "bg-indigo-600" },
-  { symbol: "mJPY", mark: "¥", quoteTo: "mUSD", badgeClass: "bg-teal-600" },
+  { symbol: "mUSD", quoteTo: "mEUR" },
+  { symbol: "mEUR", quoteTo: "mUSD" },
+  { symbol: "mJPY", quoteTo: "mUSD" },
 ];
 
 export default function OverviewView({
@@ -44,7 +43,6 @@ export default function OverviewView({
   const [swapInSymbol, setSwapInSymbol] = useState("mUSD");
   const [swapOutSymbol, setSwapOutSymbol] = useState("mEUR");
   const [swapRotated, setSwapRotated] = useState(false);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [selectedHeroToken, setSelectedHeroToken] = useState("mUSD");
 
   const displayAddr = walletAddress || "0x71C7656EC7ab88b098defB751B7401B5f6d89A3F";
@@ -73,15 +71,6 @@ export default function OverviewView({
     setSwapOutSymbol(swapInSymbol);
     setSwapRotated((r) => !r);
   };
-
-  const handleTorusPointerMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const nx = (e.clientX - rect.left) / rect.width - 0.5;
-    const ny = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: -ny * 14, y: nx * 16 });
-  };
-
-  const resetTorusTilt = () => setTilt({ x: 0, y: 0 });
 
   const activeHeroNode =
     HERO_NODES.find((node) => node.symbol === selectedHeroToken) || HERO_NODES[0];
@@ -124,7 +113,7 @@ export default function OverviewView({
 
       {/* 2. Top Hero Section (3-Column Translucent Frosted Glass Grid matching Figma Image 2) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch stagger-1">
-        
+
         {/* Left Column: Wallet Status Card */}
         <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-5 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
@@ -192,84 +181,134 @@ export default function OverviewView({
           </div>
         </div>
 
-        {/* Center Column: Interactive 3D Liquid-Glass Settlement Hub */}
-        <div
-          onMouseMove={handleTorusPointerMove}
-          onMouseLeave={resetTorusTilt}
-          className="lg:col-span-4 rounded-3xl overflow-hidden shadow-2xl border border-white/45 relative min-h-[270px] bg-[#04172b] glass-sheen-hover group"
-          style={{ perspective: "900px" }}
-        >
-          <Image
-            src="/hero-liquidity-3d.jpg"
-            alt="BorderPay 3D Liquid Glass Torus"
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 33vw"
-            draggable={false}
-            className="object-cover object-center select-none pointer-events-none transition-transform duration-300 ease-out"
-            style={{
-              transform: `scale(1.07) rotateX(${tilt.x * 0.7}deg) rotateY(${tilt.y * 0.7}deg)`,
-            }}
-          />
+        {/* Center Column: Clean Ocean-Glass QR Settlement Visualizer Card */}
+        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
+          {/* Card Header with Clean Inline Currency Tabs */}
+          <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/25">
+            <h3 className="font-extrabold text-sm text-white truncate">Settlement QR Cepat</h3>
+            <div
+              role="group"
+              aria-label="Pilih token settlement"
+              className="inline-flex items-center p-0.5 rounded-full bg-[#062c48]/50 border border-white/25 shrink-0"
+            >
+              {HERO_NODES.map((node) => {
+                const isSelected = activeHeroNode.symbol === node.symbol;
+                return (
+                  <button
+                    key={node.symbol}
+                    type="button"
+                    onClick={() => setSelectedHeroToken(node.symbol)}
+                    aria-pressed={isSelected}
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold transition cursor-pointer ${
+                      isSelected
+                        ? "bg-white text-[#0B192C] shadow-xs"
+                        : "text-white/80 hover:text-white"
+                    }`}
+                  >
+                    {node.symbol}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(4, 21, 41, 0.28) 0%, rgba(4, 21, 41, 0.08) 46%, rgba(3, 16, 33, 0.86) 100%)",
-            }}
-          />
-
-          {/* Interactive Currency Nodes cleanly positioned inside safe inset bounds */}
-          {HERO_NODES.map((node, index) => {
-            const isSelected = activeHeroNode.symbol === node.symbol;
-            const posClass =
-              index === 0
-                ? "top-3.5 left-3.5"
-                : index === 1
-                ? "top-3.5 right-3.5"
-                : "bottom-[78px] right-3.5";
-            return (
+          {/* Clean Visual Payment Route Graphic (No Overlapping Badges) */}
+          <div className="rounded-2xl bg-[#05233b]/35 border border-white/20 p-4 space-y-3.5">
+            <div className="flex items-center justify-between gap-2">
+              {/* Mini Scannable QR Preview Node */}
               <button
-                key={node.symbol}
                 type="button"
-                onClick={() => setSelectedHeroToken(node.symbol)}
-                aria-pressed={isSelected}
-                className={`btn-press absolute ${posClass} px-3 py-1 rounded-full backdrop-blur-md text-white text-[11px] font-extrabold shadow-lg flex items-center gap-1.5 border transition-all duration-200 cursor-pointer ${
-                  node.badgeClass
-                } ${
-                  isSelected
-                    ? "border-white ring-2 ring-white/55 scale-105 opacity-100"
-                    : "border-white/40 opacity-85 hover:opacity-100 hover:scale-105"
-                }`}
+                onClick={() =>
+                  onQuickCreateInvoice
+                    ? onQuickCreateInvoice(activeHeroNode.symbol)
+                    : onSelectTab("terminal")
+                }
+                className="group/qr flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+                title={`Buat Invoice QR ${activeHeroNode.symbol}`}
               >
-                <span>{node.symbol}</span>
-                <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px]">
-                  {node.mark}
+                <div className="w-14 h-14 rounded-2xl bg-white p-2 shadow-md relative overflow-hidden transition-transform duration-200 group-hover/qr:scale-105">
+                  <svg viewBox="0 0 36 36" className="w-full h-full text-[#0B192C]" aria-hidden="true">
+                    <rect x="2" y="2" width="11" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                    <rect x="5.5" y="5.5" width="4" height="4" rx="0.8" fill="#1951FC" />
+                    <rect x="23" y="2" width="11" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                    <rect x="26.5" y="5.5" width="4" height="4" rx="0.8" fill="currentColor" />
+                    <rect x="2" y="23" width="11" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                    <rect x="5.5" y="26.5" width="4" height="4" rx="0.8" fill="currentColor" />
+                    <rect x="16.5" y="16.5" width="5" height="5" rx="1" fill="#1951FC" />
+                    <path d="M16 4h4M16 9h2M23 18h4M25 23h7v4h-5M17 26h4v7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+                  </svg>
+                  <div className="absolute inset-x-1 h-0.5 bg-sky-400/80 animate-scan pointer-events-none" />
+                </div>
+                <span className="text-[10px] font-bold text-white/85 group-hover/qr:text-white">
+                  QR {activeHeroNode.symbol}
                 </span>
               </button>
-            );
-          })}
 
-          {/* Interactive Settlement Core HUD */}
-          <div className="absolute bottom-3 inset-x-3 p-3 rounded-2xl bg-[#051d36]/80 backdrop-blur-xl border border-white/25 flex items-center justify-between gap-2.5 shadow-xl">
+              {/* Animated On-Chain Conversion Connector */}
+              <div className="flex-1 flex flex-col items-center gap-1 min-w-0 px-1">
+                <span className="px-2 py-0.5 rounded-full bg-white/15 border border-white/25 font-mono text-[10px] font-bold text-sky-100 whitespace-nowrap">
+                  1 = {heroRate} {activeHeroNode.quoteTo}
+                </span>
+                <svg className="w-full h-4 text-sky-300" viewBox="0 0 100 16" fill="none" aria-hidden="true">
+                  <line
+                    x1="4"
+                    y1="8"
+                    x2="90"
+                    y2="8"
+                    stroke="rgba(186, 230, 253, 0.45)"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                  />
+                  <circle cx="4" cy="8" r="2.5" fill="#7dd3fc" />
+                  <path
+                    d="M86 4L94 8L86 12"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="text-[10px] text-white/70 font-medium truncate">
+                  Sepolia Auto-Swap
+                </span>
+              </div>
+
+              {/* Settlement Token Destination Node */}
+              <button
+                type="button"
+                onClick={onOpenAssetModal}
+                className="group/tok flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+                title="Lihat Saldo Token"
+              >
+                <div className="w-14 h-14 rounded-2xl bg-[#062c48]/65 border border-white/30 flex items-center justify-center shadow-inner transition-transform duration-200 group-hover/tok:scale-105">
+                  <TokenIcon symbol={activeHeroNode.quoteTo} size="w-8 h-8" />
+                </div>
+                <span className="text-[10px] font-bold text-white/85 group-hover/tok:text-white">
+                  Terima {activeHeroNode.quoteTo}
+                </span>
+              </button>
+            </div>
+
+            {/* Balance Readout Row */}
             <button
               type="button"
               onClick={onOpenAssetModal}
-              className="text-left min-w-0 group/bal cursor-pointer"
-              title="Lihat Detail Saldo Token"
+              className="w-full pt-2.5 border-t border-white/15 flex items-center justify-between text-xs cursor-pointer group/bal"
             >
-              <span className="text-[10px] font-bold text-sky-200/90 block truncate group-hover/bal:text-white transition-colors">
-                Saldo {activeHeroNode.symbol} · 1 = {heroRate} {activeHeroNode.quoteTo}
+              <span className="text-white/75 group-hover/bal:text-white transition-colors">
+                Saldo {activeHeroNode.symbol}
               </span>
               <span
                 key={activeHeroNode.symbol}
-                className="text-sm sm:text-base font-extrabold text-white tracking-tight block truncate animate-pop"
+                className="font-mono font-extrabold text-white animate-pop"
               >
-                {heroBalance} <span className="text-xs font-bold text-sky-300">{activeHeroNode.symbol}</span>
+                {heroBalance} {activeHeroNode.symbol} ›
               </span>
             </button>
+          </div>
 
+          {/* Aligned Bottom Action Pills (Matches Left & Right Hero Cards) */}
+          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/25">
             <button
               type="button"
               onClick={() =>
@@ -277,9 +316,16 @@ export default function OverviewView({
                   ? onQuickCreateInvoice(activeHeroNode.symbol)
                   : onSelectTab("terminal")
               }
-              className="btn-press shrink-0 px-3.5 py-2 rounded-xl bg-[#1951FC] hover:bg-blue-500 text-white text-xs font-extrabold shadow-md shadow-blue-950/40 border border-white/25 cursor-pointer transition-colors"
+              className="btn-press glass-hero-pill-btn py-2 px-3 rounded-full text-white text-xs font-bold text-center cursor-pointer truncate"
             >
-              Buat QR {activeHeroNode.symbol} →
+              Buat QR {activeHeroNode.symbol}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectTab("rates")}
+              className="btn-press glass-hero-pill-btn py-2 px-3 rounded-full text-white text-xs font-bold text-center cursor-pointer truncate"
+            >
+              Simulasi Kurs
             </button>
           </div>
         </div>
@@ -308,13 +354,12 @@ export default function OverviewView({
                 >
                   <div className="flex items-center gap-2.5">
                     <div
-                      className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-extrabold ${
-                        i === 0
-                          ? "bg-emerald-400/25 text-emerald-200 border-emerald-300/35"
-                          : i === 1
+                      className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-extrabold ${i === 0
+                        ? "bg-emerald-400/25 text-emerald-200 border-emerald-300/35"
+                        : i === 1
                           ? "bg-sky-400/25 text-sky-200 border-sky-300/35"
                           : "bg-white/15 text-white/85 border-white/25"
-                      }`}
+                        }`}
                     >
                       ✓
                     </div>
@@ -404,9 +449,8 @@ export default function OverviewView({
                     key={f.id}
                     type="button"
                     onClick={() => setActiveChartFilter(f.id)}
-                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
-                      activeChartFilter === f.id ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
-                    }`}
+                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${activeChartFilter === f.id ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
+                      }`}
                   >
                     {f.label}
                   </button>
@@ -444,8 +488,8 @@ export default function OverviewView({
                     activeChartFilter === "7d"
                       ? "M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25 L 270 75 L 20 75 Z"
                       : activeChartFilter === "30d"
-                      ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18 L 270 75 L 20 75 Z"
-                      : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14 L 270 75 L 20 75 Z"
+                        ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18 L 270 75 L 20 75 Z"
+                        : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14 L 270 75 L 20 75 Z"
                   }
                   fill="url(#chart-grad)"
                 />
@@ -454,8 +498,8 @@ export default function OverviewView({
                     activeChartFilter === "7d"
                       ? "M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25"
                       : activeChartFilter === "30d"
-                      ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18"
-                      : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14"
+                        ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18"
+                        : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14"
                   }
                   fill="none"
                   stroke="#1951FC"
