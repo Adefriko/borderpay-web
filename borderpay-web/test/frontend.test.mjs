@@ -11,6 +11,7 @@ import {
   summarizeInvoices,
   buildActivityBuckets,
   buildLiveNotifications,
+  parseBorderPayPaymentLink,
 } from "../lib/activityUtils.js";
 
 describe("BorderPay Frontend Logic & Web3 Verification Suite", () => {
@@ -226,6 +227,20 @@ describe("BorderPay Frontend Logic & Web3 Verification Suite", () => {
       });
       assert.equal(populated.length, 3);
       assert.match(populated[0].title, /Wallet MetaMask terhubung/);
+    });
+
+    it("Should parse valid BorderPay QR payment links and reject malformed URLs", () => {
+      const valid = parseBorderPayPaymentLink(
+        "https://borderpay.finance/pay?orderId=0x123&receiver=0xabc&amount=25",
+        "http://localhost:3000"
+      );
+      assert.equal(valid, "/pay?orderId=0x123&receiver=0xabc&amount=25");
+
+      const rel = parseBorderPayPaymentLink("/pay?orderId=0x1&receiver=0x2&amount=10", "http://localhost:3000");
+      assert.equal(rel, "/pay?orderId=0x1&receiver=0x2&amount=10");
+
+      assert.throws(() => parseBorderPayPaymentLink("https://example.com/other"), /bukan halaman pembayaran/);
+      assert.throws(() => parseBorderPayPaymentLink("https://borderpay.finance/pay?orderId=0x1"), /Parameter invoice tidak lengkap/);
     });
   });
 });

@@ -287,3 +287,30 @@ export function buildLiveNotifications({
 
   return items;
 }
+
+export function parseBorderPayPaymentLink(rawText, baseOrigin = "https://borderpay.local") {
+  const trimmed = typeof rawText === "string" ? rawText.trim() : "";
+  if (!trimmed) {
+    throw new Error("Harap masukkan atau pindai link invoice BorderPay.");
+  }
+
+  let urlObj;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    urlObj = new URL(trimmed);
+  } else if (trimmed.startsWith("/pay?") || trimmed.startsWith("pay?")) {
+    urlObj = new URL(trimmed.replace(/^pay\?/, "/pay?"), baseOrigin);
+  } else {
+    throw new Error("Format link tidak valid. Harus mengandung URL pembayaran BorderPay.");
+  }
+
+  if (!urlObj.pathname.includes("/pay")) {
+    throw new Error("QR atau link ini bukan halaman pembayaran BorderPay (/pay).");
+  }
+
+  const params = urlObj.searchParams;
+  if (!params.get("orderId") || !params.get("receiver") || !params.get("amount")) {
+    throw new Error("Parameter invoice tidak lengkap (orderId, receiver, atau amount hilang).");
+  }
+
+  return `/pay?${params.toString()}`;
+}
