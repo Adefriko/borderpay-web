@@ -127,20 +127,20 @@ export default function LedgerView({
       </div>
 
       {/* Main Grid: Transactions Table (Left) + Detail Flyout (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         
         {/* Table Container (7 or 8 Cols) */}
-        <div className="lg:col-span-8 p-6 sm:p-7 rounded-3xl glass-panel space-y-4">
+        <div className="lg:col-span-8 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-panel space-y-4">
           
           {/* Table Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <h3 className="font-extrabold text-base text-[#0B192C]">Daftar Transaksi</h3>
 
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onExportCsv}
-                className="btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition cursor-pointer"
+                className="btn-press flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition cursor-pointer"
               >
                 <IconDownload className="w-3.5 h-3.5" />
                 <span>Ekspor CSV</span>
@@ -150,7 +150,7 @@ export default function LedgerView({
                 type="button"
                 onClick={onRefresh}
                 disabled={isLoading}
-                className="btn-press flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#1951FC] hover:bg-blue-600 text-xs font-bold text-white transition shadow-xs cursor-pointer"
+                className="btn-press flex items-center gap-1.5 px-3.5 py-2 sm:py-1.5 rounded-xl bg-[#1951FC] hover:bg-blue-600 text-xs font-bold text-white transition shadow-xs cursor-pointer"
               >
                 <IconRefresh className="w-3.5 h-3.5" isSpinning={isLoading} />
                 <span>{isLoading ? "Memuat..." : "Refresh"}</span>
@@ -159,9 +159,9 @@ export default function LedgerView({
           </div>
 
           {/* Search & Token Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
             {/* Filter Pills */}
-            <div className="flex flex-wrap items-center gap-1 self-start sm:self-auto">
+            <div className="flex flex-wrap items-center gap-1.5">
               {["ALL", "mUSD", "mEUR", "mJPY"].map((sym) => (
                 <button
                   key={sym}
@@ -210,13 +210,53 @@ export default function LedgerView({
                   setCurrentPage(1);
                 }}
                 placeholder="Cari hash transaksi..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition"
+                className="w-full pl-8 pr-3 py-2 sm:py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none transition"
               />
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto rounded-xl border border-slate-200/70">
+          {/* Mobile Card Stack (Zero horizontal scroll on narrow screens) */}
+          <div className="sm:hidden space-y-2.5">
+            {displayedHistory.length === 0 ? (
+              <div className="py-10 text-center text-slate-400 text-xs font-medium rounded-xl border border-slate-200/70">
+                {isLoading ? "Membaca log blockchain Sepolia..." : "Tidak ada transaksi ditemukan."}
+              </div>
+            ) : (
+              displayedHistory.map((item) => {
+                const isSelected = activeTx?.txHash === item.txHash;
+                const shortHash = `${item.txHash.slice(0, 6)}..${item.txHash.slice(-4)}`;
+                return (
+                  <button
+                    key={item.id || item.txHash}
+                    type="button"
+                    onClick={() => setSelectedTx(item)}
+                    className={`w-full text-left p-3.5 rounded-2xl border transition space-y-2 cursor-pointer ${
+                      isSelected
+                        ? "bg-blue-50/80 border-blue-400 shadow-xs"
+                        : "bg-slate-50/70 border-slate-200/80 hover:border-blue-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs font-bold text-blue-600">{shortHash}</span>
+                      <span className="text-[10px] font-bold text-slate-500">{item.time || "-"}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs font-mono">
+                      <span className="font-bold text-slate-800">
+                        {item.amountIn} {item.tokenInSymbol}
+                      </span>
+                      <span className="text-slate-400">→</span>
+                      <span className="font-extrabold text-emerald-600">
+                        {item.amountOut} {item.tokenOutSymbol}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop/Tablet Table */}
+          <div className="hidden sm:block overflow-x-auto rounded-xl border border-slate-200/70">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-400 uppercase tracking-wider font-extrabold text-[10px] border-b border-slate-200">
                 <tr>
@@ -298,13 +338,13 @@ export default function LedgerView({
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 text-xs text-slate-500">
             <span>
               Menampilkan {displayedHistory.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-
               {Math.min(currentPage * pageSize, filteredHistory.length)} dari {filteredHistory.length} event
             </span>
 
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               <button
                 type="button"
                 disabled={currentPage <= 1}
@@ -342,7 +382,7 @@ export default function LedgerView({
         {/* Right Detail Card (Matching Figma Image 5 Flyout) */}
         <div
           key={activeTx?.txHash || "empty"}
-          className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-panel space-y-5 animate-slide-right"
+          className="lg:col-span-4 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-panel space-y-5 animate-slide-right"
         >
           {activeTx ? (
             <>

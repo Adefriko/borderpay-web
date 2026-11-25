@@ -132,16 +132,16 @@ export default function AuthLandingView({
         </div>
 
         {/* Main Frosted Glass Card */}
-        <div className="glass-create-form rounded-3xl p-6 sm:p-7 space-y-5 animate-modal-pop">
+        <div className="glass-create-form rounded-3xl p-4 sm:p-6 lg:p-7 space-y-5 animate-modal-pop">
           {/* Wallet Status Bar */}
-          <div className="p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div
                 className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                   walletAddress ? "bg-emerald-500 animate-pulse" : "bg-amber-400"
                 }`}
               />
-              <div className="truncate">
+              <div className="min-w-0 truncate">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Status Dompet
                 </span>
@@ -157,7 +157,7 @@ export default function AuthLandingView({
               <button
                 type="button"
                 onClick={handleCopyWallet}
-                className="btn-press p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-blue-600 transition cursor-pointer shadow-2xs"
+                className="btn-press p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-blue-600 transition cursor-pointer shadow-2xs shrink-0"
                 title="Salin Alamat Wallet"
               >
                 {copiedAddr ? (
@@ -170,7 +170,7 @@ export default function AuthLandingView({
               <button
                 type="button"
                 onClick={onConnectWallet}
-                className="btn-press px-3.5 py-1.5 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                className="btn-press px-3 sm:px-3.5 py-2 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5 cursor-pointer flex-shrink-0"
               >
                 <IconMetaMask className="w-4 h-4" />
                 <span>Connect Wallet</span>

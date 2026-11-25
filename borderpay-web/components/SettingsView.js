@@ -120,9 +120,9 @@ export default function SettingsView({
         </p>
       </div>
 
-      {/* Centered Sub-Tabs Floating Capsule (Matched to Figma Image 13) */}
+      {/* Centered Sub-Tabs Floating Capsule */}
       <div className="flex justify-center">
-        <div className="inline-flex flex-wrap items-center justify-center gap-1 p-1.5 bg-white/95 backdrop-blur-xl border border-white rounded-2xl shadow-md">
+        <div className="max-w-full inline-flex flex-wrap items-center justify-center gap-1 p-1.5 bg-white/95 backdrop-blur-xl border border-white rounded-2xl shadow-md">
           {[
             { id: "all", label: "Semua" },
             { id: "tampilan", label: "Tampilan" },
@@ -135,7 +135,7 @@ export default function SettingsView({
               key={tab.id}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 activeSubTab === tab.id
                   ? "bg-[#05354e] text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
@@ -147,12 +147,12 @@ export default function SettingsView({
         </div>
       </div>
 
-      {/* 2-Column Bento Settings Grid (Matched 1:1 to Figma Image 13) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start max-w-5xl mx-auto">
+      {/* 2-Column Bento Settings Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start max-w-5xl mx-auto">
         
         {/* 1. Tampilan Card */}
         {showSection("tampilan") && (
-          <div className="p-6 rounded-3xl surface-card space-y-5">
+          <div className="min-w-0 p-4 sm:p-6 rounded-3xl surface-card space-y-5">
             <div className="flex items-center justify-between">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Tampilan</h3>
               <span className="text-blue-600 text-xs font-bold">Tema</span>

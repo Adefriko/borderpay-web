@@ -138,24 +138,24 @@ export default function LiveRatesCard() {
       </div>
 
       {/* Main Simulator Card (Matching Figma Image 4) */}
-      <div className="rounded-3xl p-6 sm:p-8 glass-panel space-y-6 relative overflow-hidden">
+      <div className="rounded-3xl p-4 sm:p-6 lg:p-8 glass-panel space-y-6 relative overflow-hidden">
         
         {/* Converter Inputs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4">
           {/* ANDA BAYAR */}
-          <div className="p-5 rounded-2xl glass-sub-card space-y-2">
+          <div className="min-w-0 p-4 sm:p-5 rounded-2xl glass-sub-card space-y-2">
             <span className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider block">
               ANDA BAYAR
             </span>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-2.5 min-w-0">
               <input
                 type="number"
                 value={simAmount}
                 onChange={(e) => setSimAmount(e.target.value)}
                 placeholder="100"
-                className="w-full text-2xl sm:text-3xl font-extrabold text-[#0B192C] bg-transparent focus:outline-none"
+                className="min-w-0 flex-1 text-xl sm:text-3xl font-extrabold text-[#0B192C] bg-transparent focus:outline-none"
               />
-              <div className="flex items-center gap-2 bg-white/90 border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/90 border border-slate-200 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-2xs shrink-0">
                 <TokenIcon symbol={tokenInInfo.symbol} size="w-5 h-5" />
                 <select
                   value={simTokenIn}
@@ -170,7 +170,7 @@ export default function LiveRatesCard() {
                 </select>
               </div>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium block">
+            <span className="text-[11px] text-slate-500 font-medium block truncate">
               {tokenInInfo.symbol} — {tokenInInfo.name}
             </span>
           </div>
@@ -189,15 +189,15 @@ export default function LiveRatesCard() {
           </div>
 
           {/* DITERIMA (ESTIMASI) */}
-          <div className="p-5 rounded-2xl glass-sub-card space-y-2">
+          <div className="min-w-0 p-4 sm:p-5 rounded-2xl glass-sub-card space-y-2">
             <span className="text-[11px] font-extrabold uppercase text-slate-500 tracking-wider block">
               DITERIMA (ESTIMASI)
             </span>
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#0B192C]">
+            <div className="flex items-center justify-between gap-2.5 min-w-0">
+              <div className="min-w-0 flex-1 text-xl sm:text-3xl font-extrabold text-[#0B192C] truncate">
                 {calcResult?.out || "0.0000"}
               </div>
-              <div className="flex items-center gap-2 bg-white/90 border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/90 border border-slate-200 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-2xs shrink-0">
                 <TokenIcon symbol={tokenOutInfo.symbol} size="w-5 h-5" />
                 <select
                   value={simTokenOut}
@@ -212,7 +212,7 @@ export default function LiveRatesCard() {
                 </select>
               </div>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium block">
+            <span className="text-[11px] text-slate-500 font-medium block truncate">
               {tokenOutInfo.symbol} — {tokenOutInfo.name}
             </span>
           </div>
@@ -222,13 +222,13 @@ export default function LiveRatesCard() {
         <div className="flex flex-col items-center justify-center space-y-2">
           <div
             key={`${tokenInInfo.symbol}-${tokenOutInfo.symbol}-${calcResult?.out}`}
-            className="px-5 py-2.5 rounded-xl bg-[#0B192C] text-white font-extrabold text-sm tracking-wide shadow-sm flex items-center gap-2 animate-pop"
+            className="px-4 sm:px-5 py-2.5 rounded-xl bg-[#0B192C] text-white font-extrabold text-xs sm:text-sm tracking-wide shadow-sm flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 max-w-full text-center animate-pop"
           >
-            <span>{simAmount || "0"} {tokenInInfo.symbol}</span>
+            <span className="break-all">{simAmount || "0"} {tokenInInfo.symbol}</span>
             <span>→</span>
-            <span>{calcResult?.out || "0.0000"} {tokenOutInfo.symbol}</span>
+            <span className="break-all">{calcResult?.out || "0.0000"} {tokenOutInfo.symbol}</span>
           </div>
-          <p className="text-[11px] text-slate-500 font-medium">
+          <p className="text-[11px] text-slate-500 font-medium text-center">
             ℹ️ Rate simulasi kontrak pintar: 1 {tokenInInfo.symbol} = {currentPairRate} {tokenOutInfo.symbol}
           </p>
         </div>
@@ -239,7 +239,7 @@ export default function LiveRatesCard() {
             ℹ️ Quote ini dihitung dari rate simulasi smart contract, bukan harga pasar real. Tidak ada eksekusi swap dari halaman ini.
           </p>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3">
             <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Diperbarui {lastUpdated}</span>

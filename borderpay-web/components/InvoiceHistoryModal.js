@@ -73,8 +73,8 @@ export default function InvoiceHistoryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl max-h-[88vh] rounded-3xl bg-white/95 backdrop-blur-xl border border-white shadow-2xl p-6 text-slate-800 flex flex-col space-y-4 animate-modal-pop">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-2xl max-h-[90dvh] rounded-3xl bg-white/95 backdrop-blur-xl border border-white shadow-2xl p-4 sm:p-6 text-slate-800 flex flex-col space-y-4 animate-modal-pop">
         
         {/* Header (Matched to Figma Image 6) */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">

@@ -83,15 +83,15 @@ export default function CreateQrView({
       </div>
 
       {/* 2. Main 2-Column Grid matching Figma Image 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
         
         {/* Left Column: Form Card (7 Cols, Frosted Translucent Glass Top -> White Bottom) */}
-        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl glass-create-form space-y-5">
+        <div className="lg:col-span-7 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-create-form space-y-5">
           <form onSubmit={onGenerate} className="space-y-4">
             
             {/* Alamat Penerima */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <label className="text-xs font-bold text-slate-800">
                   Alamat penerima
                 </label>
@@ -107,9 +107,9 @@ export default function CreateQrView({
                 type="text"
                 value={receiver}
                 onChange={(e) => setReceiver(e.target.value)}
-                placeholder="0x71C7...9A3F"
+                placeholder="0x..."
                 required
-                className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                className="w-full px-3.5 sm:px-4 py-2.5 rounded-2xl glass-sub-card text-xs font-mono text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
               />
             </div>
 
@@ -123,7 +123,7 @@ export default function CreateQrView({
                 value={merchantName}
                 onChange={(e) => setMerchantName(e.target.value)}
                 placeholder="Toko Kopi Nusantara"
-                className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                className="w-full px-3.5 sm:px-4 py-2.5 rounded-2xl glass-sub-card text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
               />
             </div>
 
@@ -139,7 +139,7 @@ export default function CreateQrView({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="250.00"
                   required
-                  className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs font-extrabold text-[#0B192C] placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                  className="w-full px-3.5 sm:px-4 py-2.5 rounded-2xl glass-sub-card text-xs font-extrabold text-[#0B192C] placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
                 />
                 <span className="text-[10px] text-slate-500 block font-medium">
                   Maksimum mock: 10,000.00
@@ -149,7 +149,7 @@ export default function CreateQrView({
               {/* Token Selector Pills */}
               <div className="sm:col-span-6 space-y-1.5">
                 <label className="text-xs font-bold text-slate-800">Token</label>
-                <div className="flex items-center gap-1.5">
+                <div className="grid grid-cols-3 gap-1.5">
                   {TOKENS.map((tok) => {
                     const isSel = tokenOut.toLowerCase() === tok.address.toLowerCase();
                     return (
@@ -157,7 +157,7 @@ export default function CreateQrView({
                         key={tok.symbol}
                         type="button"
                         onClick={() => setTokenOut(tok.address)}
-                        className={`flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-2xl border text-xs font-bold transition cursor-pointer ${
+                        className={`flex items-center justify-center gap-1 py-2.5 px-1.5 rounded-2xl border text-[11px] sm:text-xs font-bold transition cursor-pointer ${
                           isSel
                             ? "border-blue-600 bg-blue-50/90 text-blue-700 shadow-2xs"
                             : "glass-sub-card hover:bg-white/80 text-slate-700"
@@ -180,14 +180,14 @@ export default function CreateQrView({
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="Contoh: Pembayaran pesanan #A-024"
-                className="w-full px-4 py-2.5 rounded-2xl glass-sub-card text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
+                className="w-full px-3.5 sm:px-4 py-2.5 rounded-2xl glass-sub-card text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 focus:outline-none transition"
               />
             </div>
 
             {/* Kedaluwarsa Presets */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-800">Kedaluwarsa</label>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { val: "5", label: "5 menit" },
                   { val: "15", label: "15 menit" },
@@ -198,7 +198,7 @@ export default function CreateQrView({
                     key={exp.val}
                     type="button"
                     onClick={() => setExpiryMinutes(exp.val)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                       expiryMinutes === exp.val
                         ? "bg-[#1951FC] text-white shadow-2xs"
                         : "glass-sub-card hover:bg-white/80 text-slate-700"
@@ -226,10 +226,10 @@ export default function CreateQrView({
         </div>
 
         {/* Right Column: Vibrant Royal Blue Preview Card (5 Cols, Matching Figma Image 1) */}
-        <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 bg-gradient-to-b from-[#1951FC] via-[#1444E0] to-[#0B2CB1] text-white shadow-xl shadow-blue-900/20 space-y-5 relative overflow-hidden glass-sheen-hover">
+        <div className="lg:col-span-5 min-w-0 rounded-3xl p-4 sm:p-6 lg:p-7 bg-gradient-to-b from-[#1951FC] via-[#1444E0] to-[#0B2CB1] text-white shadow-xl shadow-blue-900/20 space-y-5 relative overflow-hidden glass-sheen-hover">
           
           {/* Card Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center font-extrabold text-xs text-white">
                 B
@@ -239,7 +239,7 @@ export default function CreateQrView({
               </span>
             </div>
 
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold flex items-center gap-1">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold flex items-center gap-1 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>{isExpired ? "Kedaluwarsa" : "Aktif"}</span>
             </span>
@@ -249,12 +249,12 @@ export default function CreateQrView({
           <div className="flex justify-center py-2">
             <div
               key={orderIdDisplay || "preview"}
-              className="p-4 rounded-3xl bg-white shadow-lg shadow-black/10 flex items-center justify-center animate-qr-reveal"
+              className="p-3 sm:p-4 rounded-3xl bg-white shadow-lg shadow-black/10 flex items-center justify-center animate-qr-reveal max-w-full"
             >
               <QRCodeSVG
                 id="borderpay-qr-code"
                 value={paymentLink || "https://borderpay.finance/preview"}
-                size={180}
+                size={168}
                 level="M"
                 includeMargin={false}
               />
@@ -263,7 +263,7 @@ export default function CreateQrView({
 
           {/* Amount & Subtitle */}
           <div className="text-center space-y-0.5">
-            <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+            <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white break-words">
               {amount || "250.00"} {selectedToken.symbol}
             </div>
             <div className="text-[10px] uppercase font-bold tracking-widest text-blue-200">
@@ -273,19 +273,19 @@ export default function CreateQrView({
 
           {/* Metadata Rows inside Frosted Glass Inset Box */}
           <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 space-y-2 text-xs text-blue-100">
-            <div className="flex justify-between">
-              <span className="text-blue-200/75">Penerima</span>
-              <span className="font-mono font-bold text-white truncate max-w-[200px]">
+            <div className="flex justify-between gap-2">
+              <span className="text-blue-200/75 shrink-0">Penerima</span>
+              <span className="font-mono font-bold text-white truncate max-w-[140px] sm:max-w-[200px]">
                 {shortReceiver}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-blue-200/75">Invoice ID</span>
-              <span className="font-mono text-white">{shortOrderId}</span>
+            <div className="flex justify-between gap-2">
+              <span className="text-blue-200/75 shrink-0">Invoice ID</span>
+              <span className="font-mono text-white truncate max-w-[140px] sm:max-w-[200px]">{shortOrderId}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-blue-200/75">Memo</span>
-              <span className="text-white font-medium truncate max-w-[200px]">
+            <div className="flex justify-between gap-2">
+              <span className="text-blue-200/75 shrink-0">Memo</span>
+              <span className="text-white font-medium truncate max-w-[140px] sm:max-w-[200px]">
                 {memo || "Pembayaran pesanan #A-024"}
               </span>
             </div>

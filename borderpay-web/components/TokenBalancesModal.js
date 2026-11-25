@@ -129,8 +129,8 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
     : "Belum terhubung";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 text-slate-800 animate-modal-pop max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-4 sm:p-6 lg:p-7 shadow-2xl space-y-4 sm:space-y-5 text-slate-800 animate-modal-pop max-h-[90dvh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between">

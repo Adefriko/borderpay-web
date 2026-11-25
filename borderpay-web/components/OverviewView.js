@@ -95,6 +95,7 @@ export default function OverviewView({
     HERO_NODES.find((node) => node.symbol === selectedHeroToken) || HERO_NODES[0];
   const heroRate =
     SIMULATED_RATES[`${activeHeroNode.symbol}->${activeHeroNode.quoteTo}`] || 1;
+  const heroRateLabel = heroRate < 0.01 ? heroRate.toFixed(4) : heroRate;
   const heroBalance =
     tokenBalances?.[activeHeroNode.symbol] ??
     (activeHeroNode.symbol === "mJPY" ? "0" : "0.00");
@@ -188,7 +189,7 @@ export default function OverviewView({
   const yAxisMid = activityBuckets.peak > 1 ? Math.ceil(activityBuckets.peak / 2) : null;
 
   return (
-    <div className="space-y-6 text-[#0B192C]">
+    <div className="space-y-5 sm:space-y-6 text-[#0B192C]">
       {/* 1. Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 pt-1">
         <div>
@@ -204,7 +205,7 @@ export default function OverviewView({
           type="button"
           onClick={onRefreshActivity}
           disabled={isLoadingHistory}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#062c48]/40 hover:bg-[#062c48]/60 border border-white/25 text-[10px] font-extrabold uppercase text-white/90 tracking-wider transition cursor-pointer"
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#062c48]/40 hover:bg-[#062c48]/60 border border-white/25 text-[10px] font-extrabold uppercase text-white/90 tracking-wider transition cursor-pointer"
           title="Muat ulang saldo dan transaksi Sepolia"
         >
           <IconRefresh className="w-3 h-3" isSpinning={isLoadingHistory} />
@@ -218,12 +219,12 @@ export default function OverviewView({
         </button>
       </div>
 
-      {/* 2. Top Hero Section (3-Column Translucent Frosted Glass Grid) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch stagger-1">
+      {/* 2. Top Hero Section (Responsive Grid: stacked <1024px, 3 columns >=1024px) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch stagger-1">
         {/* Left Column: Real Wallet / Session Card */}
-        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-5 text-white transition-transform duration-300 hover:-translate-y-0.5">
+        <div className="lg:col-span-4 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 sm:space-y-5 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[10px] font-extrabold uppercase text-white/80 tracking-wider">
                 {hasMetaMask
                   ? "WALLET METAMASK TERHUBUNG"
@@ -232,7 +233,7 @@ export default function OverviewView({
                   : "WALLET BELUM TERHUBUNG"}
               </span>
               <span
-                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border backdrop-blur-md flex items-center gap-1 ${
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border backdrop-blur-md flex items-center gap-1 shrink-0 ${
                   hasMetaMask
                     ? "bg-emerald-400/20 text-emerald-200 border-emerald-300/40"
                     : isProfileOnly
@@ -253,7 +254,7 @@ export default function OverviewView({
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono font-extrabold text-base text-white tracking-tight">
                 {shortAddr}
               </span>
@@ -283,7 +284,7 @@ export default function OverviewView({
               )}
             </div>
 
-            <div className="pt-2">
+            <div className="pt-1 sm:pt-2">
               <span className="text-[11px] text-white/75 font-medium block">Saldo Sepolia ETH</span>
               <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mt-0.5">
                 {ethBalance} <span className="text-sm font-bold text-white/75">ETH</span>
@@ -296,25 +297,25 @@ export default function OverviewView({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/25">
+          <div className="grid grid-cols-1 min-[370px]:grid-cols-3 gap-2 pt-3 border-t border-white/25">
             <button
               type="button"
               onClick={() => onSelectTab("terminal")}
-              className="btn-press glass-hero-pill-btn py-2 px-2 rounded-full text-white text-xs font-bold text-center cursor-pointer"
+              className="btn-press glass-hero-pill-btn py-2.5 sm:py-2 px-2 rounded-full text-white text-xs font-bold text-center cursor-pointer"
             >
               Buat QR
             </button>
             <button
               type="button"
               onClick={onOpenScanner}
-              className="btn-press glass-hero-pill-btn py-2 px-2 rounded-full text-white text-xs font-bold text-center cursor-pointer"
+              className="btn-press glass-hero-pill-btn py-2.5 sm:py-2 px-2 rounded-full text-white text-xs font-bold text-center cursor-pointer"
             >
               Scan & Bayar
             </button>
             <button
               type="button"
               onClick={onOpenAssetModal}
-              className="btn-press glass-hero-pill-btn py-2 px-2 rounded-full text-white text-xs font-bold text-center cursor-pointer"
+              className="btn-press glass-hero-pill-btn py-2.5 sm:py-2 px-2 rounded-full text-white text-xs font-bold text-center cursor-pointer"
             >
               Saldo Token
             </button>
@@ -322,9 +323,9 @@ export default function OverviewView({
         </div>
 
         {/* Center Column: Clean Ocean-Glass QR Settlement Visualizer Card */}
-        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
-          <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/25">
-            <h3 className="font-extrabold text-sm text-white truncate">Settlement QR Cepat</h3>
+        <div className="lg:col-span-4 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/25">
+            <h3 className="font-extrabold text-sm text-white">Settlement QR Cepat</h3>
             <div
               role="group"
               aria-label="Pilih token settlement"
@@ -351,8 +352,8 @@ export default function OverviewView({
             </div>
           </div>
 
-          <div className="rounded-2xl bg-[#05233b]/35 border border-white/20 p-4 space-y-3.5">
-            <div className="flex items-center justify-between gap-2">
+          <div className="rounded-2xl bg-[#05233b]/35 border border-white/20 p-3 sm:p-4 space-y-3.5">
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() =>
@@ -360,10 +361,10 @@ export default function OverviewView({
                     ? onQuickCreateInvoice(activeHeroNode.symbol)
                     : onSelectTab("terminal")
                 }
-                className="group/qr flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+                className="group/qr flex flex-col items-center gap-1 cursor-pointer shrink-0"
                 title={`Buat Invoice QR ${activeHeroNode.symbol}`}
               >
-                <div className="w-14 h-14 rounded-2xl bg-white p-2 shadow-md relative overflow-hidden transition-transform duration-200 group-hover/qr:scale-105">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white p-1.5 sm:p-2 shadow-md relative overflow-hidden transition-transform duration-200 group-hover/qr:scale-105">
                   <svg viewBox="0 0 36 36" className="w-full h-full text-[#0B192C]" aria-hidden="true">
                     <rect x="2" y="2" width="11" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5" />
                     <rect x="5.5" y="5.5" width="4" height="4" rx="0.8" fill="#1951FC" />
@@ -376,14 +377,14 @@ export default function OverviewView({
                   </svg>
                   <div className="absolute inset-x-1 h-0.5 bg-sky-400/80 animate-scan pointer-events-none" />
                 </div>
-                <span className="text-[10px] font-bold text-white/85 group-hover/qr:text-white">
+                <span className="text-[10px] font-bold text-white/85 group-hover/qr:text-white whitespace-nowrap">
                   QR {activeHeroNode.symbol}
                 </span>
               </button>
 
-              <div className="flex-1 flex flex-col items-center gap-1 min-w-0 px-1">
-                <span className="px-2 py-0.5 rounded-full bg-white/15 border border-white/25 font-mono text-[10px] font-bold text-sky-100 whitespace-nowrap">
-                  1 = {heroRate} {activeHeroNode.quoteTo}
+              <div className="flex-1 flex flex-col items-center gap-1 min-w-0 px-0.5 sm:px-1">
+                <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-white/15 border border-white/25 font-mono text-[9px] sm:text-[10px] font-bold text-sky-100 text-center max-w-full truncate">
+                  1 = {heroRateLabel} {activeHeroNode.quoteTo}
                 </span>
                 <svg className="w-full h-4 text-sky-300" viewBox="0 0 100 16" fill="none" aria-hidden="true">
                   <line
@@ -404,7 +405,7 @@ export default function OverviewView({
                     strokeLinejoin="round"
                   />
                 </svg>
-                <span className="text-[10px] text-white/70 font-medium truncate">
+                <span className="text-[9px] sm:text-[10px] text-white/70 font-medium truncate max-w-full">
                   Sepolia Auto-Swap
                 </span>
               </div>
@@ -412,13 +413,13 @@ export default function OverviewView({
               <button
                 type="button"
                 onClick={onOpenAssetModal}
-                className="group/tok flex flex-col items-center gap-1.5 cursor-pointer shrink-0"
+                className="group/tok flex flex-col items-center gap-1 cursor-pointer shrink-0"
                 title="Lihat Saldo Token"
               >
-                <div className="w-14 h-14 rounded-2xl bg-[#062c48]/65 border border-white/30 flex items-center justify-center shadow-inner transition-transform duration-200 group-hover/tok:scale-105">
-                  <TokenIcon symbol={activeHeroNode.quoteTo} size="w-8 h-8" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#062c48]/65 border border-white/30 flex items-center justify-center shadow-inner transition-transform duration-200 group-hover/tok:scale-105">
+                  <TokenIcon symbol={activeHeroNode.quoteTo} size="w-7 h-7 sm:w-8 sm:h-8" />
                 </div>
-                <span className="text-[10px] font-bold text-white/85 group-hover/tok:text-white">
+                <span className="text-[10px] font-bold text-white/85 group-hover/tok:text-white whitespace-nowrap">
                   Terima {activeHeroNode.quoteTo}
                 </span>
               </button>
@@ -427,14 +428,14 @@ export default function OverviewView({
             <button
               type="button"
               onClick={onOpenAssetModal}
-              className="w-full pt-2.5 border-t border-white/15 flex items-center justify-between text-xs cursor-pointer group/bal"
+              className="w-full pt-2.5 border-t border-white/15 flex items-center justify-between gap-2 text-xs cursor-pointer group/bal"
             >
-              <span className="text-white/75 group-hover/bal:text-white transition-colors">
+              <span className="text-white/75 group-hover/bal:text-white transition-colors truncate">
                 Saldo {activeHeroNode.symbol}
               </span>
               <span
                 key={activeHeroNode.symbol}
-                className="font-mono font-extrabold text-white animate-pop"
+                className="font-mono font-extrabold text-white animate-pop shrink-0"
               >
                 {heroBalance} {activeHeroNode.symbol} ›
               </span>
@@ -449,14 +450,14 @@ export default function OverviewView({
                   ? onQuickCreateInvoice(activeHeroNode.symbol)
                   : onSelectTab("terminal")
               }
-              className="btn-press glass-hero-pill-btn py-2 px-3 rounded-full text-white text-xs font-bold text-center cursor-pointer truncate"
+              className="btn-press glass-hero-pill-btn py-2.5 sm:py-2 px-2.5 sm:px-3 rounded-full text-white text-xs font-bold text-center cursor-pointer truncate"
             >
               Buat QR {activeHeroNode.symbol}
             </button>
             <button
               type="button"
               onClick={() => onSelectTab("rates")}
-              className="btn-press glass-hero-pill-btn py-2 px-3 rounded-full text-white text-xs font-bold text-center cursor-pointer truncate"
+              className="btn-press glass-hero-pill-btn py-2.5 sm:py-2 px-2.5 sm:px-3 rounded-full text-white text-xs font-bold text-center cursor-pointer truncate"
             >
               Simulasi Kurs
             </button>
@@ -464,7 +465,7 @@ export default function OverviewView({
         </div>
 
         {/* Right Column: Live Activity Feed (Sepolia On-Chain + DB Invoices) */}
-        <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
+        <div className="lg:col-span-4 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/25">
               <h3 className="font-extrabold text-sm text-white">Aktivitas Terbaru</h3>
@@ -488,7 +489,7 @@ export default function OverviewView({
                 <button
                   type="button"
                   onClick={() => onSelectTab("terminal")}
-                  className="btn-press glass-hero-pill-btn px-3.5 py-1.5 rounded-full text-[11px] font-bold text-white cursor-pointer"
+                  className="btn-press glass-hero-pill-btn px-3.5 py-2 rounded-full text-[11px] font-bold text-white cursor-pointer"
                 >
                   + Buat QR Pertama
                 </button>
@@ -549,11 +550,11 @@ export default function OverviewView({
       </div>
 
       {/* 3. Middle Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 stagger-2">
         {/* Live Sepolia Token Balances */}
-        <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
+        <div className="min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Saldo Token Mock</h3>
               <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
                 {hasMetaMask ? "ON-CHAIN WALLET" : activeAddress ? "SEPOLIA RPC" : "BELUM TERHUBUNG"}
@@ -570,18 +571,18 @@ export default function OverviewView({
                   key={tok.sym}
                   type="button"
                   onClick={onOpenAssetModal}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl glass-sub-card hover:border-blue-300 transition cursor-pointer text-left"
+                  className="w-full flex items-center justify-between p-3 sm:p-3.5 rounded-2xl glass-sub-card hover:border-blue-300 transition cursor-pointer text-left"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-full ${tok.color} text-white flex items-center justify-center font-extrabold text-xs shadow-xs`}>
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-8 h-8 rounded-full ${tok.color} text-white flex items-center justify-center font-extrabold text-xs shadow-xs shrink-0`}>
                       {tok.badge}
                     </div>
-                    <div>
-                      <span className="font-extrabold text-sm text-[#0B192C] block">{tok.val}</span>
+                    <div className="min-w-0">
+                      <span className="font-extrabold text-sm text-[#0B192C] block truncate">{tok.val}</span>
                       <span className="text-[10px] text-slate-400 font-bold block">{tok.sym}</span>
                     </div>
                   </div>
-                  <span className="text-slate-400 text-xs">›</span>
+                  <span className="text-slate-400 text-xs shrink-0">›</span>
                 </button>
               ))}
             </div>
@@ -595,9 +596,9 @@ export default function OverviewView({
         </div>
 
         {/* Live Blockchain Activity Chart */}
-        <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
+        <div className="min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="font-extrabold text-sm text-[#0B192C]">Aktivitas On-Chain</h3>
                 <span className="text-[10px] text-slate-400">
@@ -615,7 +616,7 @@ export default function OverviewView({
                     key={f.id}
                     type="button"
                     onClick={() => setActiveChartFilter(f.id)}
-                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                    className={`px-2 py-1 sm:py-0.5 rounded-md transition cursor-pointer ${
                       activeChartFilter === f.id ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
                     }`}
                   >
@@ -626,7 +627,7 @@ export default function OverviewView({
             </div>
 
             <div className="pt-1">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase block">
                   Total Transaksi
                 </span>
@@ -710,14 +711,14 @@ export default function OverviewView({
         </div>
 
         {/* Live Local DB Invoice Summary */}
-        <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
+        <div className="min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Ringkasan Invoice</h3>
               <button
                 type="button"
                 onClick={onOpenHistory}
-                className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-extrabold uppercase cursor-pointer transition"
+                className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-extrabold uppercase cursor-pointer transition shrink-0"
               >
                 DB LOKAL
               </button>
@@ -756,23 +757,23 @@ export default function OverviewView({
       </div>
 
       {/* 4. Lower Row (Interactive Kalkulator Swap + Live Transaksi On-Chain Terbaru) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-5 p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
+        <div className="lg:col-span-5 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <h3 className="font-extrabold text-sm text-[#0B192C]">Kalkulator Swap</h3>
 
-            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2">
-              <div>
+            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2 min-w-0">
+              <div className="min-w-0 flex-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">BAYAR</span>
                 <input
                   type="number"
                   step="any"
                   value={swapInAmount}
                   onChange={(e) => setSwapInAmount(e.target.value)}
-                  className="font-extrabold text-lg text-[#0B192C] bg-transparent focus:outline-none w-32"
+                  className="font-extrabold text-lg text-[#0B192C] bg-transparent focus:outline-none w-full min-w-0"
                 />
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800 shrink-0">
                 <TokenIcon symbol={swapInSymbol} size="w-4 h-4" />
                 <select
                   value={swapInSymbol}
@@ -793,21 +794,21 @@ export default function OverviewView({
                 type="button"
                 onClick={handleFlipSwap}
                 style={{ transform: swapRotated ? "rotate(180deg)" : "rotate(0deg)" }}
-                className="btn-press w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition-transform duration-300 cursor-pointer"
+                className="btn-press w-9 h-9 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition-transform duration-300 cursor-pointer"
                 title="Tukar Pasangan"
               >
                 ⇄
               </button>
             </div>
 
-            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2">
-              <div>
+            <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2 min-w-0">
+              <div className="min-w-0 flex-1">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">TERIMA (EST.)</span>
-                <div key={computedOut} className="font-extrabold text-lg text-[#0B192C] animate-pop">
+                <div key={computedOut} className="font-extrabold text-lg text-[#0B192C] truncate animate-pop">
                   {computedOut}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800 shrink-0">
                 <TokenIcon symbol={swapOutSymbol} size="w-4 h-4" />
                 <select
                   value={swapOutSymbol}
@@ -840,8 +841,8 @@ export default function OverviewView({
           </button>
         </div>
 
-        <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl surface-card space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div className="lg:col-span-7 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl surface-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
             <div>
               <h3 className="font-extrabold text-sm text-[#0B192C]">Transaksi On-Chain Terbaru</h3>
               {activeAddress && walletHistory.length > 0 && (
@@ -859,7 +860,75 @@ export default function OverviewView({
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card Layout (Prevents table clipping on narrow phones) */}
+          <div className="sm:hidden space-y-2.5">
+            {recentTableTxs.length === 0 ? (
+              <div className="py-8 text-center space-y-2">
+                <p className="text-xs font-semibold text-slate-500">
+                  {isLoadingHistory
+                    ? "Memindai event PaymentProcessed di Sepolia..."
+                    : historyError ||
+                      "Belum ada transaksi PaymentProcessed dalam rentang blok Sepolia terbaru."}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  {onRefreshActivity && (
+                    <button
+                      type="button"
+                      onClick={onRefreshActivity}
+                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold cursor-pointer"
+                    >
+                      Muat Ulang
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => onSelectTab("terminal")}
+                    className="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold cursor-pointer"
+                  >
+                    Buat Invoice QR
+                  </button>
+                </div>
+              </div>
+            ) : (
+              recentTableTxs.map((row, idx) => {
+                const isMine = isTxForAddress(row, activeAddress);
+                return (
+                  <button
+                    key={row.id || row.txHash || idx}
+                    type="button"
+                    onClick={() => onOpenReceipt && onOpenReceipt(row)}
+                    className="w-full text-left p-3.5 rounded-2xl glass-sub-card hover:border-blue-300 transition space-y-2 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-800 text-xs">
+                        <TokenIcon symbol={row.tokenInSymbol} size="w-4 h-4" />
+                        <span>{row.pair}</span>
+                        {isMine && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[9px] font-extrabold">
+                            Anda
+                          </span>
+                        )}
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        CONFIRMED
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs font-mono">
+                      <span className="font-bold text-[#0B192C]">
+                        {row.amountIn === row.amountOut ? row.amountIn : `${row.amountIn} → ${row.amountOut}`}
+                      </span>
+                      <span className="text-blue-600 font-semibold">
+                        {row.txHash ? formatShortAddress(row.txHash) : "-"}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop/Tablet Table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider border-b border-slate-100">
                 <tr>
@@ -950,27 +1019,27 @@ export default function OverviewView({
       </div>
 
       {/* 5. Full-Width Bottom Row: Live-Tracked Onboarding Steps */}
-      <div className="p-6 sm:p-7 rounded-3xl surface-card space-y-5">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+      <div className="p-4 sm:p-6 lg:p-7 rounded-3xl surface-card space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
           <div>
             <h3 className="font-extrabold text-sm text-[#0B192C]">Panduan Mulai</h3>
             <span className="text-[11px] text-slate-400">
               Progres otomatis mengikuti status wallet, DB lokal, dan transaksi on-chain Anda
             </span>
           </div>
-          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
+          <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase shrink-0">
             QUICK START
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-5 gap-2.5 sm:gap-3">
           {guideSteps.map((step, idx) => {
             const isCurrent = idx === activeGuideIdx;
             if (step.done) {
               return (
                 <div
                   key={step.num}
-                  className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between h-24 shadow-2xs"
+                  className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between min-h-[82px] sm:h-24 shadow-2xs"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-xs text-emerald-800">{step.num}</span>
@@ -986,7 +1055,7 @@ export default function OverviewView({
               return (
                 <div
                   key={step.num}
-                  className="p-3.5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 flex flex-col justify-between h-24 shadow-xs"
+                  className="p-3.5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 flex flex-col justify-between min-h-[82px] sm:h-24 shadow-xs"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-xs text-blue-800">{step.num}</span>
@@ -1001,7 +1070,7 @@ export default function OverviewView({
             return (
               <div
                 key={step.num}
-                className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between h-24 text-slate-400"
+                className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between min-h-[82px] sm:h-24 text-slate-400"
               >
                 <span className="font-extrabold text-xs">{step.num}</span>
                 <span className="font-bold text-xs text-slate-500">{step.label}</span>

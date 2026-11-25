@@ -118,16 +118,16 @@ export default function AuthModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 text-slate-800 animate-modal-pop max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-4 sm:p-6 lg:p-7 shadow-2xl space-y-4 sm:space-y-5 text-slate-800 animate-modal-pop max-h-[90dvh] overflow-y-auto">
         
-        {/* Header (Matched to Figma Image 8) */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0">
               <IconStore className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-extrabold text-[#0B192C]">Akun & Profil Merchant</h3>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-extrabold text-[#0B192C] truncate">Akun & Profil Merchant</h3>
               <p className="text-[11px] text-slate-500">
                 Profil lokal untuk demo. Bukan autentikasi produksi.
               </p>
@@ -140,14 +140,14 @@ export default function AuthModal({
               setConfirmLogout(false);
               onClose();
             }}
-            className="btn-press w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer"
+            className="btn-press w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition cursor-pointer shrink-0"
           >
             ✕
           </button>
         </div>
 
         {/* Status Dompet Card */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5">
           <div>
             <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
               STATUS DOMPET (SEPOLIA)

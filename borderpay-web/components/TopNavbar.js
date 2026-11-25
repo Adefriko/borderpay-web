@@ -96,31 +96,31 @@ export default function TopNavbar({
   const isSettingsActive = activeTab === "settings";
 
   return (
-    <header className="sticky top-0 z-40 w-full pt-3.5 px-3 sm:px-6 max-w-[1560px] mx-auto pointer-events-none">
-      <div className="pointer-events-auto flex items-center justify-between gap-2 sm:gap-4 transition-all">
+    <header className="sticky top-0 z-40 w-full pt-3 px-3 sm:px-6 max-w-[1560px] mx-auto pointer-events-none">
+      <div className="pointer-events-auto flex items-center justify-between gap-2 lg:gap-4 transition-all">
         {/* Left: Floating Brand Pill (Clicking goes straight to Overview) */}
         <button
           type="button"
           onClick={() => onSelectTab && onSelectTab("overview")}
-          className="btn-press flex items-center gap-2.5 px-3.5 py-2 rounded-full bg-white/95 backdrop-blur-xl border border-white shadow-sm hover:shadow-md transition cursor-pointer flex-shrink-0 group"
+          className="btn-press flex items-center gap-2 px-2.5 sm:px-3.5 py-2 rounded-full bg-white/95 backdrop-blur-xl border border-white shadow-sm hover:shadow-md transition cursor-pointer flex-shrink-0 group min-h-[40px]"
           title="Kembali ke Dashboard Overview"
         >
           <IconBorderPayMark className="w-7 h-7 rounded-lg shadow-2xs group-hover:scale-105 transition-transform" />
-          <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0B192C] hidden xs:inline">
+          <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0B192C] hidden sm:inline">
             BorderPay
           </span>
         </button>
 
-        {/* Center: Floating Translucent Glass Navigation Capsule */}
+        {/* Center: Floating Translucent Glass Navigation Capsule (Desktop lg+ so tablets use drawer cleanly) */}
         <nav
-          className={`hidden md:flex items-center gap-1 p-1.5 rounded-full transition-all ${
+          className={`hidden lg:flex items-center gap-1 p-1.5 rounded-full transition-all ${
             isOceanHeader ? "glass-nav-ocean" : "glass-nav-light"
           }`}
         >
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab("overview")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isOverviewActive
                 ? "bg-white text-[#0B192C] shadow-sm"
                 : isOceanHeader
@@ -135,7 +135,7 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab("terminal")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isCreateActive
                 ? isOceanHeader
                   ? "bg-white text-[#0B192C] shadow-sm"
@@ -152,7 +152,7 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => onOpenScanner && onOpenScanner()}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isOceanHeader
                 ? "text-white/90 hover:text-white hover:bg-white/15"
                 : "text-slate-600 hover:text-blue-600 hover:bg-slate-100/70"
@@ -165,7 +165,7 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab("rates")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isRatesActive
                 ? isOceanHeader
                   ? "bg-white text-[#0B192C] shadow-sm"
@@ -182,7 +182,7 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab("ledger")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isLedgerActive
                 ? isOceanHeader
                   ? "bg-white text-[#0B192C] shadow-sm"
@@ -199,7 +199,7 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => onSelectTab && onSelectTab("settings")}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
               isSettingsActive
                 ? "bg-white text-[#0B192C] shadow-sm"
                 : isOceanHeader
@@ -212,13 +212,13 @@ export default function TopNavbar({
           </button>
         </nav>
 
-        {/* Right Cluster: Translucent Pill with Network, Wallet, Notifications, Avatar */}
+        {/* Right Cluster: Translucent Pill with Network, Wallet, Notifications, Avatar, Menu */}
         <div
-          className={`flex items-center gap-2 p-1.5 rounded-full flex-shrink-0 transition-all ${
+          className={`flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 rounded-full flex-shrink-0 transition-all min-w-0 ${
             isOceanHeader ? "glass-nav-ocean" : "glass-nav-light"
           }`}
         >
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-white text-[11px] font-extrabold text-emerald-700 shadow-2xs">
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 border border-white text-[11px] font-extrabold text-emerald-700 shadow-2xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>SEPOLIA</span>
           </div>
@@ -227,65 +227,67 @@ export default function TopNavbar({
             <button
               type="button"
               onClick={onOpenAssetModal}
-              className="btn-press flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+              className="btn-press flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white text-[11px] sm:text-xs font-bold shadow-xs transition cursor-pointer min-h-[36px]"
               title="Kelola Saldo & Token"
             >
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
               <span className="font-mono">{formattedAddress}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={onConnectWallet}
-              className="btn-press flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+              className="btn-press flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full bg-[#1951FC] hover:bg-blue-600 text-white text-[11px] sm:text-xs font-bold shadow-xs transition cursor-pointer min-h-[36px] whitespace-nowrap"
             >
-              <span>Connect Wallet</span>
+              <span className="sm:hidden">Connect</span>
+              <span className="hidden sm:inline">Connect Wallet</span>
             </button>
           )}
 
-          {/* Notification Bell Dropdown (Matched to Figma Image 12) */}
+          {/* Notification Bell Dropdown */}
           <div className="relative" ref={notificationsRef}>
             <button
               type="button"
               onClick={() => setShowNotifications(!showNotifications)}
-              className={`btn-press relative p-2 rounded-full transition cursor-pointer ${
+              className={`btn-press relative p-2 rounded-full transition cursor-pointer min-w-[36px] min-h-[36px] flex items-center justify-center ${
                 isOceanHeader
                   ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
                   : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
               }`}
               title="Notifikasi"
+              aria-label="Notifikasi"
             >
               <IconBell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white/98 backdrop-blur-xl rounded-3xl border border-slate-200/90 shadow-2xl p-4 text-xs z-50 animate-modal-pop space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+              <div className="fixed inset-x-3 top-[68px] sm:inset-x-auto sm:top-auto sm:absolute sm:right-0 sm:mt-3 w-auto sm:w-96 bg-white/98 backdrop-blur-xl rounded-3xl border border-slate-200/90 shadow-2xl p-4 text-xs z-50 animate-modal-pop space-y-3 max-h-[calc(100dvh-5.5rem)] overflow-y-auto">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span className="font-extrabold text-sm text-[#0B192C]">Notifikasi</span>
                     {unreadCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold text-[10px]">
-                        {unreadCount} belum dibaca
+                      <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold text-[10px] whitespace-nowrap">
+                        {unreadCount} baru
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {unreadCount > 0 && (
                       <button
                         type="button"
                         onClick={markAllRead}
                         className="text-[11px] text-blue-600 hover:underline font-semibold cursor-pointer"
                       >
-                        Tandai semua dibaca
+                        Tandai dibaca
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => setShowNotifications(false)}
-                      className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
+                      className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center cursor-pointer"
                     >
                       ✕
                     </button>
@@ -297,7 +299,7 @@ export default function TopNavbar({
                   <button
                     type="button"
                     onClick={() => setNotifFilter("all")}
-                    className={`flex-1 py-1 rounded-lg transition cursor-pointer ${
+                    className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${
                       notifFilter === "all"
                         ? "bg-white text-[#0B192C] shadow-2xs"
                         : "text-slate-500 hover:text-slate-800"
@@ -308,7 +310,7 @@ export default function TopNavbar({
                   <button
                     type="button"
                     onClick={() => setNotifFilter("unread")}
-                    className={`flex-1 py-1 rounded-lg transition cursor-pointer ${
+                    className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${
                       notifFilter === "unread"
                         ? "bg-white text-[#0B192C] shadow-2xs"
                         : "text-slate-500 hover:text-slate-800"
@@ -341,16 +343,16 @@ export default function TopNavbar({
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-0.5">
+                          <div className="space-y-0.5 min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-extrabold text-[#0B192C]">{item.title}</span>
+                              <span className="font-extrabold text-[#0B192C] truncate">{item.title}</span>
                               {item.unread && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
                               )}
                             </div>
-                            <p className="text-[11px] text-slate-600 leading-snug">{item.desc}</p>
+                            <p className="text-[11px] text-slate-600 leading-snug break-words">{item.desc}</p>
                           </div>
-                          <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                          <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
                             {item.time}
                           </span>
                         </div>
@@ -359,7 +361,7 @@ export default function TopNavbar({
                           <button
                             type="button"
                             onClick={() => handleNotifAction(item)}
-                            className="px-3 py-1 rounded-lg bg-[#0B192C] hover:bg-slate-800 text-white text-[10px] font-bold transition cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-[#0B192C] hover:bg-slate-800 text-white text-[10px] font-bold transition cursor-pointer"
                           >
                             {item.actionLabel}
                           </button>
@@ -377,14 +379,15 @@ export default function TopNavbar({
             <button
               type="button"
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="btn-press flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-sky-400 text-white font-extrabold text-xs shadow-xs border-2 border-white hover:opacity-90 transition cursor-pointer"
+              className="btn-press flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-sky-400 text-white font-extrabold text-xs shadow-xs border-2 border-white hover:opacity-90 transition cursor-pointer"
               title="Menu Profil"
+              aria-label="Menu Profil"
             >
               {currentUser?.storeName ? currentUser.storeName.slice(0, 2).toUpperCase() : "BP"}
             </button>
 
             {showProfileMenu && (
-              <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2.5 text-xs z-50 animate-modal-pop">
+              <div className="fixed inset-x-3 top-[68px] sm:inset-x-auto sm:top-auto sm:absolute sm:right-0 sm:mt-3 w-auto sm:w-64 bg-white rounded-2xl border border-slate-200 shadow-2xl p-2.5 text-xs z-50 animate-modal-pop max-h-[calc(100dvh-5.5rem)] overflow-y-auto">
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 mb-2">
                   <span className="font-extrabold text-[#0B192C] block truncate">
                     {currentUser?.storeName || "BorderPay Merchant"}
@@ -475,21 +478,23 @@ export default function TopNavbar({
           <button
             type="button"
             onClick={() => setShowMobileNav(!showMobileNav)}
-            className="md:hidden p-2 rounded-full bg-white/80 hover:bg-white border border-slate-200 text-slate-700 transition cursor-pointer"
+            className="lg:hidden flex items-center gap-1 px-2.5 py-2 rounded-full bg-white/90 hover:bg-white border border-slate-200 text-slate-800 text-[11px] font-bold transition cursor-pointer min-h-[36px]"
             aria-label="Toggle menu"
+            aria-expanded={showMobileNav}
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <line x1="3" y1="12" x2="21" y2="12" />
               <line x1="3" y1="6" x2="21" y2="6" />
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
+            <span className="hidden min-[400px]:inline">Menu</span>
           </button>
         </div>
       </div>
 
-      {/* Mobile Navigation Dropdown */}
+      {/* Mobile & Tablet Navigation Drawer */}
       {showMobileNav && (
-        <div className="pointer-events-auto mt-2 md:hidden bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl p-3 space-y-1 animate-modal-pop">
+        <div className="pointer-events-auto mt-2 lg:hidden bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl p-3 space-y-1 animate-modal-pop max-h-[calc(100dvh-5.5rem)] overflow-y-auto">
           {[
             { id: "overview", label: "Overview Panel", active: isOverviewActive, icon: IconDashboard },
             { id: "terminal", label: "Buat Invoice QR", active: isCreateActive, icon: IconQrCode },

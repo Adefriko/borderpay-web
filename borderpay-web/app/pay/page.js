@@ -429,15 +429,15 @@ function PaymentContent() {
     : 3;
 
   return (
-    <div className="min-h-screen text-[#0B192C] flex flex-col items-center p-4 sm:p-6 lg:p-8 relative selection:bg-blue-600/20 selection:text-blue-900">
+    <div className="min-h-screen text-[#0B192C] flex flex-col items-center p-3 sm:p-6 lg:p-8 relative selection:bg-blue-600/20 selection:text-blue-900">
       <OceanBackdrop variant="light" />
 
-      <div className="w-full max-w-5xl space-y-6">
-        {/* Top Floating Checkout Navbar (Matched to Figma Image 10) */}
-        <header className="glass-nav-light rounded-full px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
-          <Link href="/" className="btn-press flex items-center gap-2.5 hover:opacity-90 transition">
+      <div className="w-full max-w-5xl space-y-4 sm:space-y-6">
+        {/* Top Floating Checkout Navbar */}
+        <header className="glass-nav-light rounded-full px-3 sm:px-6 py-2 flex items-center justify-between gap-2 sm:gap-3">
+          <Link href="/" className="btn-press flex items-center gap-2 hover:opacity-90 transition shrink-0">
             <IconBorderPayMark className="w-8 h-8 rounded-xl shadow-2xs" />
-            <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0B192C]">
+            <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0B192C] hidden sm:inline">
               BorderPay
             </span>
           </Link>
@@ -451,26 +451,34 @@ function PaymentContent() {
             </span>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:flex text-[11px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 items-center gap-1.5">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="hidden lg:flex text-[11px] font-extrabold px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 items-center gap-1.5 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
               <span>SEPOLIA TESTNET</span>
             </span>
             {walletAddress && (
-              <span className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-full bg-[#0B192C] text-white">
+              <span className="text-[11px] font-mono font-bold px-2.5 sm:px-3 py-1.5 rounded-full bg-[#0B192C] text-white truncate max-w-[115px] sm:max-w-none">
                 {walletAddress.slice(0, 6)}..{walletAddress.slice(-4)}
               </span>
             )}
             <button
               type="button"
               onClick={() => setIsAssetModalOpen(true)}
-              className="btn-press text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-2xs cursor-pointer"
+              className="btn-press text-xs font-bold px-3 py-1.5 rounded-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 transition shadow-2xs cursor-pointer shrink-0"
               title="Cek Saldo Koin"
             >
               Saldo 💳
             </button>
           </div>
         </header>
+
+        {/* Compact Mobile Step Indicator */}
+        <div className="sm:hidden surface-card rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs font-bold">
+          <span className="text-slate-500">Langkah Checkout</span>
+          <span className="text-[#1951FC]">
+            {status === "SUCCESS" ? "5 / 5 Selesai ✓" : `${checkoutStep} / 5`}
+          </span>
+        </div>
 
         {/* 5-Step Checkout Progress Header (Matched to Figma Image 10) */}
         <div className="surface-card rounded-full p-2 px-4 hidden sm:flex items-center justify-between gap-2 text-xs font-bold">
@@ -529,8 +537,8 @@ function PaymentContent() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-5 rounded-3xl p-6 sm:p-7 surface-card space-y-5 text-slate-800">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+          <div className="lg:col-span-5 min-w-0 rounded-3xl p-4 sm:p-6 lg:p-7 surface-card space-y-5 text-slate-800">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h2 className="text-base font-extrabold text-[#0B192C]">Ringkasan Invoice</h2>
               <span
@@ -665,12 +673,12 @@ function PaymentContent() {
             </div>
           </div>
 
-          <div className="lg:col-span-7 space-y-5 text-slate-800">
-            {/* Vibrant Blue Token Picker Banner Card (Matched to Figma Image 10) */}
-            <div className="rounded-3xl p-6 bg-gradient-to-br from-[#0e86b8] via-[#1951FC] to-[#0b35c4] text-white shadow-xl shadow-blue-900/15 space-y-4">
+          <div className="lg:col-span-7 min-w-0 space-y-5 text-slate-800">
+            {/* Vibrant Blue Token Picker Banner Card */}
+            <div className="rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-[#0e86b8] via-[#1951FC] to-[#0b35c4] text-white shadow-xl shadow-blue-900/15 space-y-4">
               <h2 className="text-sm font-extrabold tracking-wide">Pilih token pembayaran</h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                 {TOKENS.map((t) => {
                   const isSelected = tokenInAddr.toLowerCase() === t.address.toLowerCase();
                   return (
@@ -701,7 +709,7 @@ function PaymentContent() {
                 })}
               </div>
 
-              <div className="flex items-center justify-between text-xs text-blue-100">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-blue-100">
                 <span>
                   Saldo:{" "}
                   <strong className="text-white font-mono">
@@ -717,42 +725,42 @@ function PaymentContent() {
             </div>
 
             {/* White Execution Details Card */}
-            <div className="rounded-3xl p-6 sm:p-7 surface-card space-y-5">
+            <div className="rounded-3xl p-4 sm:p-6 lg:p-7 surface-card space-y-5">
 
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-              <div className="flex justify-between items-center text-xs">
+            <div className="p-3.5 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex flex-wrap justify-between items-center gap-1.5 text-xs">
                 <span className="text-slate-500 font-semibold">Kurs Eksekusi Smart Contract:</span>
                 <span className="font-mono font-extrabold text-blue-600">
                   1 {tokenInInfo.symbol} = {rateDisplay} {tokenOutInfo.symbol}
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
-                <div>
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
                   <span className="text-[11px] text-slate-500 font-medium block">
                     Total yang Harus Anda Bayar:
                   </span>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <TokenIcon symbol={tokenInInfo.symbol} size="w-5 h-5" />
-                    <span className="text-xl font-extrabold text-[#0B192C]">
+                    <span className="text-lg sm:text-xl font-extrabold text-[#0B192C] break-all">
                       {formattedReqIn} {tokenInInfo.symbol}
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <span className="text-[10px] text-slate-400 block font-medium">Slippage Tolerance</span>
                   <span className="text-xs font-bold text-emerald-600">Maks. 0.5%</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs font-mono">
+              <div className="p-3 rounded-xl bg-white border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
                 <div className="space-y-0.5">
                   <span className="text-slate-400 text-[10px] block uppercase font-sans">Estimasi Gas Network</span>
                   <span className="text-slate-800 font-bold">
                     {isEstimatingGas ? "Menghitung..." : `~${estimatedGasEth} Sepolia ETH`}
                   </span>
                 </div>
-                <div className="text-right space-y-0.5">
+                <div className="sm:text-right space-y-0.5">
                   <span className="text-slate-400 text-[10px] block uppercase font-sans">Saldo Gas Anda</span>
                   <span
                     className={`font-bold ${

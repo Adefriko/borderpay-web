@@ -108,9 +108,9 @@ export default function TransactionReceiptModal({ isOpen, onClose, tx }) {
   const shortAddr = (addr) => (addr ? `${addr.slice(0, 6)}..${addr.slice(-4)}` : "-");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#072a3a]/60 backdrop-blur-md animate-fadeIn">
-      {/* Receipt Card with Teal Framing Accent (Matched to Figma Image 11) */}
-      <div className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 text-slate-800 animate-modal-pop border border-white overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#072a3a]/60 backdrop-blur-md animate-fadeIn">
+      {/* Receipt Card with Teal Framing Accent */}
+      <div className="relative w-full max-w-md bg-white rounded-3xl p-4 sm:p-6 lg:p-7 shadow-2xl space-y-4 sm:space-y-5 text-slate-800 animate-modal-pop border border-white max-h-[90dvh] overflow-y-auto overflow-x-hidden">
         
         {/* Top Verified Halo */}
         <div className="text-center space-y-2 pt-1">
