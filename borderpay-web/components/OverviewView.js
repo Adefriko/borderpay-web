@@ -1,11 +1,18 @@
 "use client";
 import { useState } from "react";
 import { TOKENS } from "../constants/contracts";
-import { getLocalInvoices } from "../lib/invoiceStore";
+import {
+  formatShortAddress,
+  formatRelativeTimeId,
+  isTxForAddress,
+  summarizeInvoices,
+  buildActivityBuckets,
+} from "../lib/activityUtils";
 import {
   TokenIcon,
   IconCopy,
   IconCheck,
+  IconRefresh,
 } from "./Icons";
 import { useToast } from "./ToastContext";
 
@@ -26,12 +33,20 @@ const HERO_NODES = [
 
 export default function OverviewView({
   walletAddress = "",
-  tokenBalances = { mUSD: "10,000.00", mEUR: "10,000.00", mJPY: "1,000,000" },
-  ethBalance = "0.482",
+  effectiveAddress = "",
+  currentUser = null,
+  tokenBalances = { mUSD: "0.00", mEUR: "0.00", mJPY: "0" },
+  ethBalance = "0.000",
   history = [],
+  localInvoices = [],
+  isLoadingHistory = false,
+  historyError = "",
+  onRefreshActivity,
+  onConnectWallet,
   onSelectTab,
   onOpenScanner,
   onOpenAssetModal,
+  onOpenHistory,
   onOpenGuide,
   onOpenReceipt,
   onQuickCreateInvoice,
@@ -44,14 +59,18 @@ export default function OverviewView({
   const [swapOutSymbol, setSwapOutSymbol] = useState("mEUR");
   const [swapRotated, setSwapRotated] = useState(false);
   const [selectedHeroToken, setSelectedHeroToken] = useState("mUSD");
+  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
-  const displayAddr = walletAddress || "0x71C7656EC7ab88b098defB751B7401B5f6d89A3F";
-  const shortAddr = `${displayAddr.slice(0, 6)}...${displayAddr.slice(-4)}`;
+  const activeAddress = effectiveAddress || walletAddress || currentUser?.address || "";
+  const hasMetaMask = Boolean(walletAddress);
+  const isProfileOnly = !walletAddress && Boolean(currentUser?.address);
+  const shortAddr = activeAddress ? formatShortAddress(activeAddress) : "Belum terhubung";
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(displayAddr);
+    if (!activeAddress) return;
+    navigator.clipboard.writeText(activeAddress);
     setCopiedHeroWallet(true);
-    toast.info("Alamat Tersalin", displayAddr);
+    toast.info("Alamat Tersalin", activeAddress);
     setTimeout(() => setCopiedHeroWallet(false), 2000);
   };
 
@@ -76,23 +95,97 @@ export default function OverviewView({
     HERO_NODES.find((node) => node.symbol === selectedHeroToken) || HERO_NODES[0];
   const heroRate =
     SIMULATED_RATES[`${activeHeroNode.symbol}->${activeHeroNode.quoteTo}`] || 1;
-  const heroBalance = tokenBalances?.[activeHeroNode.symbol] || "0.00";
+  const heroBalance =
+    tokenBalances?.[activeHeroNode.symbol] ??
+    (activeHeroNode.symbol === "mJPY" ? "0" : "0.00");
 
-  // Real local invoice summary stats combined with on-chain count
-  const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
-  const localInvoices = typeof window !== "undefined" ? getLocalInvoices() : [];
-  const activeInvCount =
-    localInvoices.length > 0
-      ? localInvoices.filter((inv) => !inv.deadline || inv.deadline >= nowSec).length
-      : 4;
-  const expiredInvCount =
-    localInvoices.length > 0
-      ? localInvoices.filter((inv) => inv.deadline && inv.deadline < nowSec).length
-      : 2;
-  const matchedInvCount = history.length > 0 ? history.length : 7;
+  // Live DB, wallet, and Sepolia blockchain aggregations
+  const walletHistory = activeAddress
+    ? history.filter((tx) => isTxForAddress(tx, activeAddress))
+    : [];
+  const prioritizedHistory = activeAddress
+    ? [
+        ...walletHistory,
+        ...history.filter((tx) => !isTxForAddress(tx, activeAddress)),
+      ]
+    : history;
 
-  // Live recent transactions preview (falls back to baseline if empty)
-  const recentTxs = history.slice(0, 4);
+  const invoiceStats = summarizeInvoices(localInvoices, history, nowSec);
+  const activityBuckets = buildActivityBuckets({
+    history,
+    filter: activeChartFilter,
+  });
+
+  // Hero "Aktivitas Terbaru": combine real blockchain events first, then real DB invoices
+  const heroFeedItems = [];
+  for (const tx of prioritizedHistory.slice(0, 3)) {
+    const mine = isTxForAddress(tx, activeAddress);
+    heroFeedItems.push({
+      key: `tx-${tx.id || tx.txHash}`,
+      kind: "tx",
+      tx,
+      badge: mine ? `WALLET • ${tx.pair}` : `CONFIRMED • ${tx.pair}`,
+      primaryText: formatShortAddress(tx.txHash),
+      subText: `${tx.amountIn} ${tx.tokenInSymbol} → ${tx.amountOut} ${tx.tokenOutSymbol}`,
+      tone: mine ? "emerald" : "sky",
+    });
+  }
+
+  if (heroFeedItems.length < 3) {
+    const remainingSlots = 3 - heroFeedItems.length;
+    for (const inv of localInvoices.slice(0, remainingSlots)) {
+      const key = inv?.orderId ? String(inv.orderId).toLowerCase() : "";
+      const paid = inv.status === "PAID" || invoiceStats.matchedSet.has(key);
+      const expired = !paid && inv.deadline && Number(inv.deadline) < nowSec;
+      heroFeedItems.push({
+        key: `inv-${inv.orderId}`,
+        kind: "inv",
+        inv,
+        badge: paid
+          ? `TERBAYAR • ${inv.tokenSymbol || "mUSD"}`
+          : expired
+          ? `KEDALUWARSA • ${inv.tokenSymbol || "mUSD"}`
+          : `INVOICE LOKAL • ${inv.tokenSymbol || "mUSD"}`,
+        primaryText: `${inv.amount} ${inv.tokenSymbol || "mUSD"}`,
+        subText: inv.memo || formatRelativeTimeId(inv.createdAt),
+        tone: paid ? "emerald" : expired ? "amber" : "sky",
+      });
+    }
+  }
+
+  // Onboarding guide steps strictly bound to real wallet, DB, and blockchain state
+  const guideSteps = [
+    {
+      num: 1,
+      label: "Connect Wallet",
+      done: hasMetaMask,
+    },
+    {
+      num: 2,
+      label: "Create or Scan QR",
+      done: localInvoices.length > 0,
+    },
+    {
+      num: 3,
+      label: "Review Payment",
+      done: invoiceStats.paidCount > 0 || walletHistory.length > 0,
+    },
+    {
+      num: 4,
+      label: "Confirm Transaction",
+      done: walletHistory.length > 0 || invoiceStats.paidCount > 0,
+    },
+    {
+      num: 5,
+      label: "Verify Blockchain",
+      done: history.length > 0 && (walletHistory.length > 0 || invoiceStats.paidCount > 0),
+    },
+  ];
+  const completedGuideCount = guideSteps.filter((s) => s.done).length;
+  const activeGuideIdx = guideSteps.findIndex((s) => !s.done);
+
+  const recentTableTxs = prioritizedHistory.slice(0, 5);
+  const yAxisMid = activityBuckets.peak > 1 ? Math.ceil(activityBuckets.peak / 2) : null;
 
   return (
     <div className="space-y-6 text-[#0B192C]">
@@ -103,27 +196,60 @@ export default function OverviewView({
             Overview Panel
           </h1>
           <p className="text-xs sm:text-sm text-white/85 font-medium mt-0.5">
-            Kelola invoice QR, token simulasi, dan aktivitas blockchain dalam satu antarmuka terpadu.
+            Sinkronisasi langsung dengan DB lokal, wallet Anda, dan event kontrak Sepolia Testnet.
           </p>
         </div>
-        <span className="text-[10px] font-extrabold uppercase text-white/75 tracking-wider">
-          SEPOLIA TESTNET • LIVE SYNC
-        </span>
+
+        <button
+          type="button"
+          onClick={onRefreshActivity}
+          disabled={isLoadingHistory}
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#062c48]/40 hover:bg-[#062c48]/60 border border-white/25 text-[10px] font-extrabold uppercase text-white/90 tracking-wider transition cursor-pointer"
+          title="Muat ulang saldo dan transaksi Sepolia"
+        >
+          <IconRefresh className="w-3 h-3" isSpinning={isLoadingHistory} />
+          <span>
+            {isLoadingHistory
+              ? "MENYINKRONKAN SEPOLIA..."
+              : historyError
+              ? "RPC OFFLINE • LOKAL AKTIF"
+              : "SEPOLIA TESTNET • LIVE SYNC"}
+          </span>
+        </button>
       </div>
 
-      {/* 2. Top Hero Section (3-Column Translucent Frosted Glass Grid matching Figma Image 2) */}
+      {/* 2. Top Hero Section (3-Column Translucent Frosted Glass Grid) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch stagger-1">
-
-        {/* Left Column: Wallet Status Card */}
+        {/* Left Column: Real Wallet / Session Card */}
         <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-5 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold uppercase text-white/75 tracking-wider">
-                {walletAddress ? "WALLET TERHUBUNG" : "DEMO PREVIEW WALLET"}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-extrabold uppercase text-white/80 tracking-wider">
+                {hasMetaMask
+                  ? "WALLET METAMASK TERHUBUNG"
+                  : isProfileOnly
+                  ? "WALLET PROFIL TERDAFTAR"
+                  : "WALLET BELUM TERHUBUNG"}
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-extrabold border border-emerald-300/40 backdrop-blur-md flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{walletAddress ? "ACTIVE" : "DEMO"}</span>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border backdrop-blur-md flex items-center gap-1 ${
+                  hasMetaMask
+                    ? "bg-emerald-400/20 text-emerald-200 border-emerald-300/40"
+                    : isProfileOnly
+                    ? "bg-sky-400/20 text-sky-100 border-sky-300/40"
+                    : "bg-white/10 text-white/75 border-white/25"
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    hasMetaMask
+                      ? "bg-emerald-400 animate-pulse"
+                      : isProfileOnly
+                      ? "bg-sky-300"
+                      : "bg-white/50"
+                  }`}
+                />
+                <span>{hasMetaMask ? "ACTIVE" : isProfileOnly ? "SEPOLIA RPC" : "OFFLINE"}</span>
               </span>
             </div>
 
@@ -131,27 +257,41 @@ export default function OverviewView({
               <span className="font-mono font-extrabold text-base text-white tracking-tight">
                 {shortAddr}
               </span>
-              <button
-                type="button"
-                onClick={copyAddress}
-                className="text-white/75 hover:text-white transition cursor-pointer"
-                title="Salin Alamat"
-              >
-                {copiedHeroWallet ? (
-                  <IconCheck className="w-4 h-4 text-emerald-300" />
-                ) : (
-                  <IconCopy className="w-4 h-4" />
-                )}
-              </button>
+              {activeAddress ? (
+                <button
+                  type="button"
+                  onClick={copyAddress}
+                  className="text-white/75 hover:text-white transition cursor-pointer"
+                  title="Salin Alamat"
+                >
+                  {copiedHeroWallet ? (
+                    <IconCheck className="w-4 h-4 text-emerald-300" />
+                  ) : (
+                    <IconCopy className="w-4 h-4" />
+                  )}
+                </button>
+              ) : (
+                onConnectWallet && (
+                  <button
+                    type="button"
+                    onClick={onConnectWallet}
+                    className="text-[11px] font-bold underline text-sky-200 hover:text-white cursor-pointer"
+                  >
+                    Hubungkan MetaMask
+                  </button>
+                )
+              )}
             </div>
 
             <div className="pt-2">
-              <span className="text-[11px] text-white/75 font-medium block">Saldo Test ETH</span>
+              <span className="text-[11px] text-white/75 font-medium block">Saldo Sepolia ETH</span>
               <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mt-0.5">
                 {ethBalance} <span className="text-sm font-bold text-white/75">ETH</span>
               </div>
-              <p className="text-[10px] text-white/65 mt-1">
-                *Test ETH is gas only. Mock tokens in simulation values.
+              <p className="text-[10px] text-white/70 mt-1">
+                {activeAddress
+                  ? "Dibaca langsung dari jaringan Ethereum Sepolia Testnet."
+                  : "Hubungkan wallet untuk membaca saldo ETH dan token Anda."}
               </p>
             </div>
           </div>
@@ -183,7 +323,6 @@ export default function OverviewView({
 
         {/* Center Column: Clean Ocean-Glass QR Settlement Visualizer Card */}
         <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
-          {/* Card Header with Clean Inline Currency Tabs */}
           <div className="flex items-center justify-between gap-2 pb-2 border-b border-white/25">
             <h3 className="font-extrabold text-sm text-white truncate">Settlement QR Cepat</h3>
             <div
@@ -212,10 +351,8 @@ export default function OverviewView({
             </div>
           </div>
 
-          {/* Clean Visual Payment Route Graphic (No Overlapping Badges) */}
           <div className="rounded-2xl bg-[#05233b]/35 border border-white/20 p-4 space-y-3.5">
             <div className="flex items-center justify-between gap-2">
-              {/* Mini Scannable QR Preview Node */}
               <button
                 type="button"
                 onClick={() =>
@@ -244,7 +381,6 @@ export default function OverviewView({
                 </span>
               </button>
 
-              {/* Animated On-Chain Conversion Connector */}
               <div className="flex-1 flex flex-col items-center gap-1 min-w-0 px-1">
                 <span className="px-2 py-0.5 rounded-full bg-white/15 border border-white/25 font-mono text-[10px] font-bold text-sky-100 whitespace-nowrap">
                   1 = {heroRate} {activeHeroNode.quoteTo}
@@ -273,7 +409,6 @@ export default function OverviewView({
                 </span>
               </div>
 
-              {/* Settlement Token Destination Node */}
               <button
                 type="button"
                 onClick={onOpenAssetModal}
@@ -289,7 +424,6 @@ export default function OverviewView({
               </button>
             </div>
 
-            {/* Balance Readout Row */}
             <button
               type="button"
               onClick={onOpenAssetModal}
@@ -307,7 +441,6 @@ export default function OverviewView({
             </button>
           </div>
 
-          {/* Aligned Bottom Action Pills (Matches Left & Right Hero Cards) */}
           <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/25">
             <button
               type="button"
@@ -330,7 +463,7 @@ export default function OverviewView({
           </div>
         </div>
 
-        {/* Right Column: Aktivitas Terbaru Card (Wired to Live History + Receipt) */}
+        {/* Right Column: Live Activity Feed (Sepolia On-Chain + DB Invoices) */}
         <div className="lg:col-span-4 p-6 sm:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/25">
@@ -345,37 +478,64 @@ export default function OverviewView({
               </button>
             </div>
 
-            <div className="space-y-2">
-              {recentTxs.slice(0, 3).map((tx, i) => (
-                <div
-                  key={tx.id || tx.txHash || i}
-                  onClick={() => onOpenReceipt && onOpenReceipt(tx)}
-                  className="p-2.5 rounded-2xl glass-hero-row flex items-center justify-between cursor-pointer"
+            {heroFeedItems.length === 0 ? (
+              <div className="p-4 rounded-2xl glass-hero-row text-center space-y-2.5 my-2">
+                <p className="text-xs font-semibold text-white/90">
+                  {isLoadingHistory
+                    ? "Memuat aktivitas blockchain Sepolia..."
+                    : "Belum ada transaksi on-chain maupun invoice lokal."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onSelectTab("terminal")}
+                  className="btn-press glass-hero-pill-btn px-3.5 py-1.5 rounded-full text-[11px] font-bold text-white cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-extrabold ${i === 0
-                        ? "bg-emerald-400/25 text-emerald-200 border-emerald-300/35"
-                        : i === 1
-                          ? "bg-sky-400/25 text-sky-200 border-sky-300/35"
-                          : "bg-white/15 text-white/85 border-white/25"
+                  + Buat QR Pertama
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {heroFeedItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => {
+                      if (item.kind === "tx" && onOpenReceipt) onOpenReceipt(item.tx);
+                      else if (item.kind === "inv" && onOpenHistory) onOpenHistory();
+                    }}
+                    className="w-full text-left p-2.5 rounded-2xl glass-hero-row flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-6 h-6 rounded-full border shrink-0 flex items-center justify-center text-xs font-extrabold ${
+                          item.tone === "emerald"
+                            ? "bg-emerald-400/25 text-emerald-200 border-emerald-300/35"
+                            : item.tone === "amber"
+                            ? "bg-amber-400/25 text-amber-200 border-amber-300/35"
+                            : "bg-sky-400/25 text-sky-200 border-sky-300/35"
                         }`}
-                    >
-                      ✓
+                      >
+                        {item.kind === "tx" ? "✓" : "•"}
+                      </div>
+                      <div className="min-w-0">
+                        <span
+                          className={`text-[10px] uppercase font-extrabold block leading-tight truncate ${
+                            item.tone === "amber" ? "text-amber-200" : "text-emerald-200"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                        <span className="font-mono text-xs text-white font-semibold block truncate">
+                          {item.primaryText}
+                          {item.subText ? ` · ${item.subText}` : ""}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-extrabold text-emerald-200 block leading-tight">
-                        CONFIRMED • {tx.pair}
-                      </span>
-                      <span className="font-mono text-xs text-white font-semibold">
-                        {tx.txHash ? `${tx.txHash.slice(0, 6)}...${tx.txHash.slice(-4)}` : "-"}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-white/60 text-xs">›</span>
-                </div>
-              ))}
-            </div>
+                    <span className="text-white/70 text-xs shrink-0 pl-2">›</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
@@ -390,20 +550,21 @@ export default function OverviewView({
 
       {/* 3. Middle Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger-2">
+        {/* Live Sepolia Token Balances */}
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Saldo Token Mock</h3>
               <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
-                EXISTING
+                {hasMetaMask ? "ON-CHAIN WALLET" : activeAddress ? "SEPOLIA RPC" : "BELUM TERHUBUNG"}
               </span>
             </div>
 
             <div className="space-y-3">
               {[
-                { sym: "mUSD", badge: "mU", color: "bg-[#1951FC]", val: tokenBalances.mUSD || "10,000.00" },
-                { sym: "mEUR", badge: "mE", color: "bg-indigo-600", val: tokenBalances.mEUR || "10,000.00" },
-                { sym: "mJPY", badge: "mJ", color: "bg-teal-500", val: tokenBalances.mJPY || "1,000,000" },
+                { sym: "mUSD", badge: "mU", color: "bg-[#1951FC]", val: tokenBalances.mUSD || "0.00" },
+                { sym: "mEUR", badge: "mE", color: "bg-indigo-600", val: tokenBalances.mEUR || "0.00" },
+                { sym: "mJPY", badge: "mJ", color: "bg-teal-500", val: tokenBalances.mJPY || "0" },
               ].map((tok) => (
                 <button
                   key={tok.sym}
@@ -427,19 +588,24 @@ export default function OverviewView({
           </div>
 
           <p className="text-[10px] text-slate-400 leading-tight">
-            Contoh saldo mock-token untuk simulasi, bukan nilai finansial riil.
+            {activeAddress
+              ? `Saldo real mock-token kontrak Sepolia untuk ${shortAddr}.`
+              : "Hubungkan wallet untuk memuat saldo mock-token kontrak Sepolia."}
           </p>
         </div>
 
+        {/* Live Blockchain Activity Chart */}
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <h3 className="font-extrabold text-sm text-[#0B192C]">Aktivitas On-Chain</h3>
-                <span className="text-[10px] text-slate-400">Berdasarkan event blockchain</span>
+                <span className="text-[10px] text-slate-400">
+                  Event Sepolia PaymentProcessed
+                </span>
               </div>
 
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 text-[10px] font-bold">
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 text-[10px] font-bold shrink-0">
                 {[
                   { id: "7d", label: "7 Hari" },
                   { id: "30d", label: "30 Hari" },
@@ -449,8 +615,9 @@ export default function OverviewView({
                     key={f.id}
                     type="button"
                     onClick={() => setActiveChartFilter(f.id)}
-                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${activeChartFilter === f.id ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
-                      }`}
+                    className={`px-2 py-0.5 rounded-md transition cursor-pointer ${
+                      activeChartFilter === f.id ? "bg-white text-[#0B192C] shadow-2xs" : "text-slate-500"
+                    }`}
                   >
                     {f.label}
                   </button>
@@ -459,95 +626,121 @@ export default function OverviewView({
             </div>
 
             <div className="pt-1">
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                Total Transaksi
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">
+                  Total Transaksi
+                </span>
+                <span className="text-[10px] font-bold text-slate-500">
+                  Swap {activityBuckets.swapCount} · Transfer {activityBuckets.transferCount}
+                </span>
+              </div>
               <div className="text-3xl font-extrabold text-[#0B192C] tracking-tight">
-                {activeChartFilter === "7d" ? Math.max(history.length, 24) : activeChartFilter === "30d" ? 84 : 128}
+                {activityBuckets.total}
               </div>
               <div className="w-full h-2 rounded-full bg-slate-100 mt-2 flex overflow-hidden">
-                <div className="w-2/3 h-full bg-[#1951FC]" />
-                <div className="w-1/3 h-full bg-cyan-400" />
+                {activityBuckets.total > 0 && (
+                  <>
+                    <div
+                      className="h-full bg-[#1951FC] transition-all duration-300"
+                      style={{ width: `${activityBuckets.swapPct}%` }}
+                    />
+                    <div
+                      className="h-full bg-cyan-400 transition-all duration-300"
+                      style={{ width: `${activityBuckets.transferPct}%` }}
+                    />
+                  </>
+                )}
               </div>
             </div>
 
             <div className="pt-2">
-              <svg key={activeChartFilter} className="w-full h-24 overflow-visible" viewBox="0 0 280 80">
+              <svg
+                key={`${activeChartFilter}-${activityBuckets.total}`}
+                className="w-full h-24 overflow-visible"
+                viewBox="0 0 280 80"
+              >
                 <defs>
                   <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="80" gradientUnits="userSpaceOnUse">
                     <stop stopColor="#1951FC" stopOpacity="0.22" />
                     <stop offset="1" stopColor="#1951FC" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
-                <line x1="0" y1="20" x2="280" y2="20" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
-                <line x1="0" y1="50" x2="280" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
-                <text x="0" y="18" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">20</text>
-                <text x="0" y="48" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">10</text>
+                <line x1="0" y1="16" x2="280" y2="16" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
+                <line x1="0" y1="42" x2="280" y2="42" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
+                <line x1="0" y1="68" x2="280" y2="68" stroke="#e2e8f0" strokeWidth="1" />
+                <text x="0" y="14" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">
+                  {activityBuckets.peak}
+                </text>
+                {yAxisMid !== null && (
+                  <text x="0" y="40" fill="#94a3b8" fontSize="8" fontFamily="sans-serif">
+                    {yAxisMid}
+                  </text>
+                )}
+                <path d={activityBuckets.areaPath} fill="url(#chart-grad)" />
                 <path
-                  d={
-                    activeChartFilter === "7d"
-                      ? "M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25 L 270 75 L 20 75 Z"
-                      : activeChartFilter === "30d"
-                        ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18 L 270 75 L 20 75 Z"
-                        : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14 L 270 75 L 20 75 Z"
-                  }
-                  fill="url(#chart-grad)"
-                />
-                <path
-                  d={
-                    activeChartFilter === "7d"
-                      ? "M20 60 Q 55 42, 90 52 T 160 35 T 225 58 T 270 25"
-                      : activeChartFilter === "30d"
-                        ? "M20 55 Q 55 30, 90 44 T 160 22 T 225 42 T 270 18"
-                        : "M20 64 Q 55 48, 90 38 T 160 28 T 225 32 T 270 14"
-                  }
+                  d={activityBuckets.linePath}
                   fill="none"
                   stroke="#1951FC"
                   strokeWidth="2.5"
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                   className="animate-chart-draw"
                 />
-                <circle cx="20" cy={activeChartFilter === "7d" ? 60 : activeChartFilter === "30d" ? 55 : 64} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
-                <circle cx="90" cy={activeChartFilter === "7d" ? 52 : activeChartFilter === "30d" ? 44 : 38} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
-                <circle cx="160" cy={activeChartFilter === "7d" ? 35 : activeChartFilter === "30d" ? 22 : 28} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
-                <circle cx="225" cy={activeChartFilter === "7d" ? 58 : activeChartFilter === "30d" ? 42 : 32} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
-                <circle cx="270" cy={activeChartFilter === "7d" ? 25 : activeChartFilter === "30d" ? 18 : 14} r="3.5" fill="#1951FC" stroke="white" strokeWidth="1.5" className="animate-pop" />
+                {activityBuckets.points.map((pt, idx) => (
+                  <circle
+                    key={idx}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="3.5"
+                    fill="#1951FC"
+                    stroke="white"
+                    strokeWidth="1.5"
+                    className="animate-pop"
+                  />
+                ))}
               </svg>
 
               <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase mt-1 px-1">
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
-                <span>Sun</span>
+                {activityBuckets.buckets.map((bucket, idx) => (
+                  <span key={idx}>{bucket.label}</span>
+                ))}
               </div>
             </div>
           </div>
         </div>
 
+        {/* Live Local DB Invoice Summary */}
         <div className="p-6 sm:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-extrabold text-sm text-[#0B192C]">Ringkasan Invoice</h3>
-              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
-                LIVE LOCAL
-              </span>
+              <button
+                type="button"
+                onClick={onOpenHistory}
+                className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-extrabold uppercase cursor-pointer transition"
+              >
+                DB LOKAL
+              </button>
             </div>
 
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between py-1.5 border-b border-slate-100/80">
                 <span className="text-xs font-semibold text-slate-600">Aktif</span>
-                <span className="text-base font-extrabold text-emerald-600">{activeInvCount}</span>
+                <span className="text-base font-extrabold text-emerald-600">
+                  {invoiceStats.activeCount}
+                </span>
               </div>
               <div className="flex items-center justify-between py-1.5 border-b border-slate-100/80">
                 <span className="text-xs font-semibold text-slate-600">Kedaluwarsa</span>
-                <span className="text-base font-extrabold text-rose-500">{expiredInvCount}</span>
+                <span className="text-base font-extrabold text-rose-500">
+                  {invoiceStats.expiredCount}
+                </span>
               </div>
               <div className="flex items-center justify-between py-1.5">
-                <span className="text-xs font-semibold text-slate-600">Tercatat On-Chain</span>
-                <span className="text-base font-extrabold text-[#0B192C]">{matchedInvCount}</span>
+                <span className="text-xs font-semibold text-slate-600">Terbayar On-Chain</span>
+                <span className="text-base font-extrabold text-[#0B192C]">
+                  {invoiceStats.paidCount}
+                </span>
               </div>
             </div>
           </div>
@@ -599,7 +792,8 @@ export default function OverviewView({
               <button
                 type="button"
                 onClick={handleFlipSwap}
-                className="btn-press w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition cursor-pointer"
+                style={{ transform: swapRotated ? "rotate(180deg)" : "rotate(0deg)" }}
+                className="btn-press w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-slate-200 shadow-2xs transition-transform duration-300 cursor-pointer"
                 title="Tukar Pasangan"
               >
                 ⇄
@@ -609,7 +803,9 @@ export default function OverviewView({
             <div className="p-3.5 rounded-2xl glass-sub-card flex items-center justify-between gap-2">
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">TERIMA (EST.)</span>
-                <div className="font-extrabold text-lg text-[#0B192C]">{computedOut}</div>
+                <div key={computedOut} className="font-extrabold text-lg text-[#0B192C] animate-pop">
+                  {computedOut}
+                </div>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs text-xs font-bold text-slate-800">
                 <TokenIcon symbol={swapOutSymbol} size="w-4 h-4" />
@@ -646,7 +842,14 @@ export default function OverviewView({
 
         <div className="lg:col-span-7 p-6 sm:p-7 rounded-3xl surface-card space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-            <h3 className="font-extrabold text-sm text-[#0B192C]">Transaksi On-Chain Terbaru</h3>
+            <div>
+              <h3 className="font-extrabold text-sm text-[#0B192C]">Transaksi On-Chain Terbaru</h3>
+              {activeAddress && walletHistory.length > 0 && (
+                <span className="text-[10px] text-blue-600 font-bold">
+                  {walletHistory.length} transaksi terkait wallet Anda
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => onSelectTab("ledger")}
@@ -668,49 +871,92 @@ export default function OverviewView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100/80 font-sans">
-                {recentTxs.map((row, idx) => (
-                  <tr
-                    key={row.id || row.txHash || idx}
-                    onClick={() => onOpenReceipt && onOpenReceipt(row)}
-                    className="hover:bg-slate-50/80 transition cursor-pointer"
-                  >
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                        <div className="flex items-center -space-x-1">
-                          <TokenIcon symbol={row.tokenInSymbol} size="w-4 h-4" />
-                          {row.tokenOutSymbol !== row.tokenInSymbol && (
-                            <TokenIcon symbol={row.tokenOutSymbol} size="w-4 h-4" />
-                          )}
-                        </div>
-                        <span>{row.pair}</span>
+                {recentTableTxs.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="py-10 text-center space-y-2">
+                      <p className="text-xs font-semibold text-slate-500">
+                        {isLoadingHistory
+                          ? "Memindai event PaymentProcessed di Sepolia..."
+                          : historyError ||
+                            "Belum ada transaksi PaymentProcessed dalam rentang blok Sepolia terbaru."}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 pt-1">
+                        {onRefreshActivity && (
+                          <button
+                            type="button"
+                            onClick={onRefreshActivity}
+                            className="px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold cursor-pointer"
+                          >
+                            Muat Ulang
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onSelectTab("terminal")}
+                          className="px-3 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold cursor-pointer"
+                        >
+                          Buat Invoice QR
+                        </button>
                       </div>
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-[#0B192C]">
-                      {row.amountIn === row.amountOut ? row.amountIn : `${row.amountIn} → ${row.amountOut}`}
-                    </td>
-                    <td className="py-3 px-3 text-slate-600 font-medium">{row.type || "Swap"}</td>
-                    <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
-                        CONFIRMED
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-blue-600 font-semibold">
-                      <span>{row.txHash ? `${row.txHash.slice(0, 6)}...${row.txHash.slice(-4)}` : "-"}</span>
-                    </td>
                   </tr>
-                ))}
+                ) : (
+                  recentTableTxs.map((row, idx) => {
+                    const isMine = isTxForAddress(row, activeAddress);
+                    return (
+                      <tr
+                        key={row.id || row.txHash || idx}
+                        onClick={() => onOpenReceipt && onOpenReceipt(row)}
+                        className="hover:bg-slate-50/80 transition cursor-pointer"
+                      >
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                            <div className="flex items-center -space-x-1">
+                              <TokenIcon symbol={row.tokenInSymbol} size="w-4 h-4" />
+                              {row.tokenOutSymbol !== row.tokenInSymbol && (
+                                <TokenIcon symbol={row.tokenOutSymbol} size="w-4 h-4" />
+                              )}
+                            </div>
+                            <span>{row.pair}</span>
+                            {isMine && (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[9px] font-extrabold">
+                                Anda
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-[#0B192C]">
+                          {row.amountIn === row.amountOut
+                            ? row.amountIn
+                            : `${row.amountIn} → ${row.amountOut}`}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 font-medium">{row.type || "Swap"}</td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-50 text-emerald-600 border border-emerald-200">
+                            CONFIRMED
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono text-blue-600 font-semibold">
+                          <span>{row.txHash ? formatShortAddress(row.txHash) : "-"}</span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      {/* 5. Full-Width Bottom Row: Panduan Mulai */}
+      {/* 5. Full-Width Bottom Row: Live-Tracked Onboarding Steps */}
       <div className="p-6 sm:p-7 rounded-3xl surface-card space-y-5">
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
           <div>
             <h3 className="font-extrabold text-sm text-[#0B192C]">Panduan Mulai</h3>
-            <span className="text-[11px] text-slate-400">Lengkapi langkah-langkah untuk simulasi penuh</span>
+            <span className="text-[11px] text-slate-400">
+              Progres otomatis mengikuti status wallet, DB lokal, dan transaksi on-chain Anda
+            </span>
           </div>
           <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-extrabold uppercase">
             QUICK START
@@ -718,48 +964,62 @@ export default function OverviewView({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between h-24 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-xs text-emerald-800">1</span>
-              <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">✓</span>
-            </div>
-            <span className="font-bold text-xs text-emerald-900">Connect Wallet</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between h-24 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-xs text-emerald-800">2</span>
-              <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">✓</span>
-            </div>
-            <span className="font-bold text-xs text-emerald-900">Create or Scan QR</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 flex flex-col justify-between h-24 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-xs text-blue-800">3</span>
-              <span className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center text-xs text-blue-600 font-bold">◎</span>
-            </div>
-            <span className="font-extrabold text-xs text-blue-900">Review Payment</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between h-24 text-slate-400">
-            <span className="font-extrabold text-xs">4</span>
-            <span className="font-bold text-xs text-slate-500">Confirm Transaction</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between h-24 text-slate-400">
-            <span className="font-extrabold text-xs">5</span>
-            <span className="font-bold text-xs text-slate-500">Verify Blockchain</span>
-          </div>
+          {guideSteps.map((step, idx) => {
+            const isCurrent = idx === activeGuideIdx;
+            if (step.done) {
+              return (
+                <div
+                  key={step.num}
+                  className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col justify-between h-24 shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-emerald-800">{step.num}</span>
+                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">
+                      ✓
+                    </span>
+                  </div>
+                  <span className="font-bold text-xs text-emerald-900">{step.label}</span>
+                </div>
+              );
+            }
+            if (isCurrent) {
+              return (
+                <div
+                  key={step.num}
+                  className="p-3.5 rounded-2xl bg-blue-50/80 border-2 border-blue-600 flex flex-col justify-between h-24 shadow-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-blue-800">{step.num}</span>
+                    <span className="w-5 h-5 rounded-full border-2 border-blue-600 flex items-center justify-center text-xs text-blue-600 font-bold">
+                      ◎
+                    </span>
+                  </div>
+                  <span className="font-extrabold text-xs text-blue-900">{step.label}</span>
+                </div>
+              );
+            }
+            return (
+              <div
+                key={step.num}
+                className="p-3.5 rounded-2xl glass-sub-card flex flex-col justify-between h-24 text-slate-400"
+              >
+                <span className="font-extrabold text-xs">{step.num}</span>
+                <span className="font-bold text-xs text-slate-500">{step.label}</span>
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
           <div className="flex items-center gap-3 flex-1 max-w-md">
             <div className="w-full h-2 rounded-full bg-slate-100 flex overflow-hidden">
-              <div className="w-2/5 h-full bg-[#1951FC]" />
+              <div
+                className="h-full bg-[#1951FC] transition-all duration-500"
+                style={{ width: `${(completedGuideCount / guideSteps.length) * 100}%` }}
+              />
             </div>
             <span className="text-xs font-bold text-slate-600 whitespace-nowrap">
-              Progress: 2/5
+              Progress: {completedGuideCount}/{guideSteps.length}
             </span>
           </div>
 
@@ -772,7 +1032,11 @@ export default function OverviewView({
               onClick={onOpenGuide}
               className="btn-press text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
             >
-              <span>Lanjut ke Review</span>
+              <span>
+                {activeGuideIdx >= 0
+                  ? `Lanjut: ${guideSteps[activeGuideIdx].label}`
+                  : "Lihat Panduan Lengkap"}
+              </span>
               <span>›</span>
             </button>
           </div>

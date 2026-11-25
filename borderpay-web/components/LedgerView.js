@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { CONTRACT_ADDRESSES } from "../constants/contracts";
+import { isTxForAddress } from "../lib/activityUtils";
 import {
   TokenIcon,
   IconCopy,
@@ -15,6 +16,8 @@ import { useToast } from "./ToastContext";
 export default function LedgerView({
   history = [],
   isLoading = false,
+  historyError = "",
+  walletAddress = "",
   onRefresh,
   onExportCsv,
   onOpenReceipt,
@@ -22,6 +25,7 @@ export default function LedgerView({
   const toast = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [tokenFilter, setTokenFilter] = useState("ALL");
+  const [onlyMine, setOnlyMine] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
   const [copiedHash, setCopiedHash] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -41,6 +45,10 @@ export default function LedgerView({
   };
 
   const filteredHistory = history.filter((item) => {
+    if (onlyMine && walletAddress && !isTxForAddress(item, walletAddress)) {
+      return false;
+    }
+
     const matchesSearch =
       item.txHash.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.orderId && item.orderId.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -83,7 +91,7 @@ export default function LedgerView({
             Jumlah transaksi tersedia: {history.length}
           </span>
           <span className="text-xs text-slate-600 font-medium">
-            Rentang query event Q-Blok terbaru
+            {historyError ? historyError : "Event kontrak PaymentProcessed Sepolia terbaru"}
           </span>
         </div>
 
@@ -153,7 +161,7 @@ export default function LedgerView({
           {/* Search & Token Filters */}
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
             {/* Filter Pills */}
-            <div className="flex items-center gap-1 self-start sm:self-auto">
+            <div className="flex flex-wrap items-center gap-1 self-start sm:self-auto">
               {["ALL", "mUSD", "mEUR", "mJPY"].map((sym) => (
                 <button
                   key={sym}
@@ -171,6 +179,22 @@ export default function LedgerView({
                   {sym}
                 </button>
               ))}
+              {walletAddress && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOnlyMine((v) => !v);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    onlyMine
+                      ? "bg-[#0B192C] text-white shadow-2xs"
+                      : "bg-slate-100 hover:bg-slate-200/80 text-slate-600"
+                  }`}
+                >
+                  Wallet Saya
+                </button>
+              )}
             </div>
 
             {/* Search Input */}
@@ -326,7 +350,7 @@ export default function LedgerView({
                 <div>
                   <h3 className="font-extrabold text-base text-[#0B192C]">Detail Transaksi</h3>
                   <span className="text-[11px] font-mono text-slate-400">
-                    {activeTx.orderId ? activeTx.orderId.slice(0, 10) : "ORD-20931"}
+                    {activeTx.orderId ? `${activeTx.orderId.slice(0, 12)}...` : "-"}
                   </span>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 text-[10px] font-extrabold border border-emerald-400/30">
@@ -374,24 +398,24 @@ export default function LedgerView({
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-medium">Nomor Blok</span>
                   <span className="font-mono font-bold text-slate-700">
-                    {activeTx.blockNumber ? activeTx.blockNumber.toLocaleString() : "7,421,890"}
+                    {activeTx.blockNumber ? activeTx.blockNumber.toLocaleString() : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-medium">Pengirim</span>
                   <span className="font-mono text-slate-700">
-                    {activeTx.sender ? `${activeTx.sender.slice(0, 6)}...${activeTx.sender.slice(-4)}` : "0x811c..E004"}
+                    {activeTx.sender ? `${activeTx.sender.slice(0, 6)}...${activeTx.sender.slice(-4)}` : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-medium">Penerima</span>
                   <span className="font-mono text-slate-700">
-                    {activeTx.receiver ? `${activeTx.receiver.slice(0, 6)}...${activeTx.receiver.slice(-4)}` : "0x3B1d..8eA0"}
+                    {activeTx.receiver ? `${activeTx.receiver.slice(0, 6)}...${activeTx.receiver.slice(-4)}` : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-medium">Waktu Konfirmasi</span>
-                  <span className="text-slate-700 font-medium">{activeTx.time || "Baru saja"}</span>
+                  <span className="text-slate-700 font-medium">{activeTx.time || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-medium">Jaringan</span>

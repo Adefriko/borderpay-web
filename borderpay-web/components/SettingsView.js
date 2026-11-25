@@ -50,11 +50,11 @@ export default function SettingsView({
   const toast = useToast();
   const [activeSubTab, setActiveSubTab] = useState("all"); // "all" | "tampilan" | "notifikasi" | "token" | "profil" | "sepolia"
   const [prefs, setPrefs] = useState(DEFAULT_PREFS);
-  const [storeNameInput, setStoreNameInput] = useState(currentUser?.storeName || "Kopi Nusantara");
-  const [emailInput, setEmailInput] = useState(currentUser?.email || "kopinusantara.demo@example.com");
+  const [storeNameInput, setStoreNameInput] = useState(currentUser?.storeName || currentUser?.name || "");
+  const [emailInput, setEmailInput] = useState(currentUser?.email || "");
   const [categoryInput, setCategoryInput] = useState(currentUser?.businessType || "Makanan & Minuman");
   const [copiedAddr, setCopiedAddr] = useState("");
-  const [savedNotice, setSavedNotice] = useState(true);
+  const [savedNotice, setSavedNotice] = useState(false);
 
   useEffect(() => {
     try {
@@ -106,7 +106,7 @@ export default function SettingsView({
   };
 
   const showSection = (id) => activeSubTab === "all" || activeSubTab === id;
-  const initials = storeNameInput ? storeNameInput.slice(0, 2).toUpperCase() : "KN";
+  const initials = storeNameInput ? storeNameInput.slice(0, 2).toUpperCase() : "BP";
 
   return (
     <div className="space-y-6 text-[#0B192C]">
@@ -299,9 +299,13 @@ export default function SettingsView({
                 {initials}
               </div>
               <div>
-                <h4 className="font-extrabold text-sm text-[#0B192C]">{storeNameInput}</h4>
+                <h4 className="font-extrabold text-sm text-[#0B192C]">
+                  {storeNameInput || "Profil Merchant"}
+                </h4>
                 <span className="text-[11px] font-mono text-slate-400">
-                  ID Merchant: BP-8829-LOCAL
+                  {walletAddress || currentUser?.address
+                    ? `Wallet: ${(walletAddress || currentUser.address).slice(0, 6)}...${(walletAddress || currentUser.address).slice(-4)}`
+                    : "Wallet belum tertaut"}
                 </span>
               </div>
             </div>

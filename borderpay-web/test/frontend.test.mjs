@@ -6,6 +6,12 @@ import {
   verifyInvoiceIntegrity,
   buildCanonicalInvoicePayload,
 } from "../lib/invoiceIntegrity.js";
+import {
+  isTxForAddress,
+  summarizeInvoices,
+  buildActivityBuckets,
+  buildLiveNotifications,
+} from "../lib/activityUtils.js";
 
 describe("BorderPay Frontend Logic & Web3 Verification Suite", () => {
   const sampleInvoice = {
@@ -149,6 +155,77 @@ describe("BorderPay Frontend Logic & Web3 Verification Suite", () => {
       const rate = 9200n;
       const requiredIn = ((amountOut * RATE_PRECISION) + rate - 1n) / rate;
       assert.equal(ethers.formatUnits(requiredIn, 18), "100.0");
+    });
+  });
+
+  describe("4. DB, Wallet & Blockchain Activity Aggregation", () => {
+    const alice = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8";
+    const bob = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC";
+
+    it("Should return exact zero counts when DB invoices and blockchain history are empty", () => {
+      const summary = summarizeInvoices([], [], 1_700_000_000);
+      assert.equal(summary.activeCount, 0);
+      assert.equal(summary.expiredCount, 0);
+      assert.equal(summary.paidCount, 0);
+
+      const buckets = buildActivityBuckets({ history: [], filter: "7d", nowMs: 1_700_000_000_000 });
+      assert.equal(buckets.total, 0);
+      assert.equal(buckets.peak, 0);
+      assert.equal(buckets.points.length, 7);
+    });
+
+    it("Should reconcile local DB invoices against on-chain PaymentProcessed orderIds", () => {
+      const nowSec = 1_700_001_000;
+      const invoices = [
+        { orderId: "0xORDER1", deadline: nowSec + 900, amount: "25", tokenSymbol: "mUSD", createdAt: nowSec - 60 },
+        { orderId: "0xORDER2", deadline: nowSec - 100, amount: "10", tokenSymbol: "mEUR", createdAt: nowSec - 900 },
+        { orderId: "0xORDER3", deadline: nowSec + 500, amount: "50", tokenSymbol: "mUSD", status: "PAID", createdAt: nowSec - 120 },
+      ];
+      const history = [
+        { orderId: "0xorder1", txHash: "0xhash1", sender: alice, receiver: bob, type: "Swap", pair: "mUSD/mEUR", amountIn: "27.17", amountOut: "25.00", tokenInSymbol: "mUSD", tokenOutSymbol: "mEUR", timestamp: nowSec * 1000 },
+      ];
+
+      const summary = summarizeInvoices(invoices, history, nowSec);
+      assert.equal(summary.activeCount, 0);
+      assert.equal(summary.expiredCount, 1);
+      assert.equal(summary.paidCount, 2);
+      assert.equal(isTxForAddress(history[0], alice.toLowerCase()), true);
+      assert.equal(isTxForAddress(history[0], "0x0000000000000000000000000000000000000001"), false);
+    });
+
+    it("Should compute real Swap/Transfer splits and dynamic buckets over active time window", () => {
+      const nowMs = Date.UTC(2026, 10, 25, 12, 0, 0);
+      const history = [
+        { type: "Swap", timestamp: nowMs - 3600_000 },
+        { type: "Swap", timestamp: nowMs - 86_400_000 },
+        { type: "Transfer", timestamp: nowMs - 2 * 86_400_000 },
+        { type: "Transfer", timestamp: nowMs - 14 * 86_400_000 },
+      ];
+
+      const week = buildActivityBuckets({ history, filter: "7d", nowMs });
+      assert.equal(week.total, 3);
+      assert.equal(week.swapCount, 2);
+      assert.equal(week.transferCount, 1);
+      assert.equal(week.swapPct, 67);
+
+      const all = buildActivityBuckets({ history, filter: "all", nowMs });
+      assert.equal(all.total, 4);
+      assert.equal(all.swapPct, 50);
+    });
+
+    it("Should build notifications strictly from real wallet, DB invoices, and on-chain events", () => {
+      const emptyNotifs = buildLiveNotifications({});
+      assert.equal(emptyNotifs.length, 0);
+
+      const populated = buildLiveNotifications({
+        walletAddress: alice,
+        localInvoices: [{ orderId: "0xINV1234567890", amount: "20", tokenSymbol: "mUSD", createdAt: 1_700_000_000, deadline: 1_700_000_900 }],
+        history: [{ txHash: "0xTXHASH123456", type: "Swap", amountIn: "20", tokenInSymbol: "mUSD", amountOut: "18.40", tokenOutSymbol: "mEUR", timestamp: 1_700_000_050_000 }],
+        nowSec: 1_700_000_100,
+        nowMs: 1_700_000_100_000,
+      });
+      assert.equal(populated.length, 3);
+      assert.match(populated[0].title, /Wallet MetaMask terhubung/);
     });
   });
 });

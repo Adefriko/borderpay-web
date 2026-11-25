@@ -136,8 +136,8 @@ export default function TransactionReceiptModal({ isOpen, onClose, tx }) {
                 TOKEN DIKIRIM
               </span>
               <span className="text-base sm:text-lg font-extrabold text-[#0B192C] font-mono">
-                {tx.amountIn || "100.00"}{" "}
-                <span className="text-xs text-slate-500">{tx.tokenInSymbol || "mUSD"}</span>
+                {tx.amountIn || "-"}{" "}
+                <span className="text-xs text-slate-500">{tx.tokenInSymbol || "-"}</span>
               </span>
             </div>
 
@@ -148,13 +148,13 @@ export default function TransactionReceiptModal({ isOpen, onClose, tx }) {
                 TOKEN DITERIMA
               </span>
               <span className="text-base sm:text-lg font-extrabold text-[#1951FC] font-mono">
-                {tx.amountOut || "92.00"}{" "}
-                <span className="text-xs text-blue-500">{tx.tokenOutSymbol || "mEUR"}</span>
+                {tx.amountOut || "-"}{" "}
+                <span className="text-xs text-blue-500">{tx.tokenOutSymbol || "-"}</span>
               </span>
             </div>
           </div>
           <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-200/70 font-mono">
-            Rate simulasi kontrak: {tx.pair || "mUSD → mEUR"}
+            Rate simulasi kontrak: {tx.pair || "-"}
           </p>
         </div>
 
@@ -187,7 +187,7 @@ export default function TransactionReceiptModal({ isOpen, onClose, tx }) {
           <div className="flex justify-between items-center">
             <span className="text-slate-400 font-medium">Order ID</span>
             <span className="font-mono font-bold text-slate-800">
-              {tx.orderId ? `${tx.orderId.slice(0, 12)}...` : "ORD-20931"}
+              {tx.orderId ? `${tx.orderId.slice(0, 14)}...` : "-"}
             </span>
           </div>
 
@@ -206,7 +206,7 @@ export default function TransactionReceiptModal({ isOpen, onClose, tx }) {
           <div className="flex justify-between items-center">
             <span className="text-slate-400 font-medium">Nomor blok</span>
             <span className="font-mono font-bold text-slate-800">
-              {tx.blockNumber ? tx.blockNumber.toLocaleString() : "6,429,183"}
+              {tx.blockNumber ? tx.blockNumber.toLocaleString() : "-"}
             </span>
           </div>
 

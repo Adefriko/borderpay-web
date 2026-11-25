@@ -3,9 +3,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { getLocalInvoices, clearLocalInvoices } from "../lib/invoiceStore";
+import { getMatchedOrderIds } from "../lib/activityUtils";
 import { IconCopy, IconCheck, IconExternalLink, IconSearch } from "./Icons";
 
-export default function InvoiceHistoryModal({ isOpen, onClose, onRecreateInvoice }) {
+export default function InvoiceHistoryModal({
+  isOpen,
+  onClose,
+  onRecreateInvoice,
+  history = [],
+  onInvoicesChanged,
+}) {
   const [copiedId, setCopiedId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "active" | "expired"
@@ -18,16 +25,23 @@ export default function InvoiceHistoryModal({ isOpen, onClose, onRecreateInvoice
   if (!isOpen) return null;
 
   const invoices = getLocalInvoices();
+  const matchedOrderIds = getMatchedOrderIds(history);
 
-  const isExpired = (deadline) => {
-    if (!deadline) return false;
-    return currentTimestamp > deadline;
+  const isPaid = (inv) => {
+    const key = inv?.orderId ? String(inv.orderId).toLowerCase() : "";
+    return inv?.status === "PAID" || (key && matchedOrderIds.has(key));
+  };
+
+  const isExpired = (inv) => {
+    if (isPaid(inv)) return false;
+    if (!inv?.deadline) return false;
+    return currentTimestamp > inv.deadline;
   };
 
   const filtered = invoices
     .filter((inv) => {
-      const expired = isExpired(inv.deadline);
-      if (statusFilter === "active" && expired) return false;
+      const expired = isExpired(inv);
+      if (statusFilter === "active" && (expired || isPaid(inv))) return false;
       if (statusFilter === "expired" && !expired) return false;
 
       if (!searchTerm.trim()) return true;
@@ -174,6 +188,7 @@ export default function InvoiceHistoryModal({ isOpen, onClose, onRecreateInvoice
                   clearLocalInvoices();
                   setConfirmClear(false);
                   setRefreshCount((c) => c + 1);
+                  if (onInvoicesChanged) onInvoicesChanged();
                 }}
                 className="btn-press px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer"
               >
@@ -195,7 +210,8 @@ export default function InvoiceHistoryModal({ isOpen, onClose, onRecreateInvoice
               </div>
             ) : (
               filtered.map((inv) => {
-                const expired = isExpired(inv.deadline);
+                const paid = isPaid(inv);
+                const expired = isExpired(inv);
                 const sym = inv.tokenSymbol || "mUSD";
                 const badgeShort = sym.slice(0, 2);
                 const badgeColor =
@@ -231,12 +247,14 @@ export default function InvoiceHistoryModal({ isOpen, onClose, onRecreateInvoice
 
                       <span
                         className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase ${
-                          expired
+                          paid
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : expired
                             ? "bg-slate-100 text-slate-500 border border-slate-200"
                             : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         }`}
                       >
-                        {expired ? "‹ Kedaluwarsa" : "✓ Aktif"}
+                        {paid ? "✓ Terbayar" : expired ? "‹ Kedaluwarsa" : "✓ Aktif"}
                       </span>
                     </div>
 

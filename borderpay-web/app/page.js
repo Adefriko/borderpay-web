@@ -1,7 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { TOKENS, CONTRACT_ADDRESSES, SWAP_ABI, ERC20_ABI } from "../constants/contracts";
+import {
+  SEPOLIA_CHAIN_ID,
+  TOKENS,
+  CONTRACT_ADDRESSES,
+  SWAP_ABI,
+  ERC20_ABI,
+} from "../constants/contracts";
 import TopNavbar from "../components/TopNavbar";
 import OceanBackdrop from "../components/OceanBackdrop";
 import OverviewView from "../components/OverviewView";
@@ -19,23 +25,29 @@ import TransactionReceiptModal from "../components/TransactionReceiptModal";
 import { useToast } from "../components/ToastContext";
 import { getActiveSession, findUserByAddress, logoutUser } from "../lib/auth";
 import { computeInvoiceChecksum } from "../lib/invoiceIntegrity";
-import { saveLocalInvoice } from "../lib/invoiceStore";
+import { saveLocalInvoice, getLocalInvoices } from "../lib/invoiceStore";
+import { formatRelativeTimeId } from "../lib/activityUtils";
+
+const EMPTY_BALANCES = {
+  mUSD: "0.00",
+  mEUR: "0.00",
+  mJPY: "0",
+};
+
+const SEPOLIA_RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com";
 
 export default function Home() {
   const toast = useToast();
 
   const [activeTab, setActiveTab] = useState("overview"); // "overview" | "terminal" | "rates" | "ledger" | "settings"
   const [walletAddress, setWalletAddress] = useState("");
+  const [chainId, setChainId] = useState(SEPOLIA_CHAIN_ID);
   const [currentUser, setCurrentUser] = useState(null);
   const [isGuest, setIsGuest] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const [tokenBalances, setTokenBalances] = useState({
-    mUSD: "10,000.00",
-    mEUR: "10,000.00",
-    mJPY: "1,000,000",
-  });
-  const [ethBalance, setEthBalance] = useState("0.482");
+  const [tokenBalances, setTokenBalances] = useState(EMPTY_BALANCES);
+  const [ethBalance, setEthBalance] = useState("0.000");
 
   const [receiver, setReceiver] = useState("");
   const [merchantName, setMerchantName] = useState("");
@@ -57,38 +69,121 @@ export default function Home() {
 
   const [copiedLink, setCopiedLink] = useState(false);
   const [history, setHistory] = useState([]);
+  const [historyError, setHistoryError] = useState("");
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [localInvoices, setLocalInvoices] = useState([]);
 
+  const effectiveAddress = walletAddress || currentUser?.address || "";
+
+  const refreshLocalInvoices = useCallback(() => {
+    setLocalInvoices(getLocalInvoices());
+  }, []);
+
+  // Load saved session, settings, and local DB invoices on mount
   useEffect(() => {
-    const session = getActiveSession();
-    if (session) {
-      setCurrentUser(session);
-      setReceiver(session.address);
-      if (session.storeName) setMerchantName(session.storeName);
-      if (session.preferredCurrency) {
-        const found = TOKENS.find((t) => t.symbol === session.preferredCurrency);
-        if (found) setTokenOut(found.address);
-      }
-    } else if (typeof window !== "undefined" && sessionStorage.getItem("borderpay_guest_mode") === "1") {
-      setIsGuest(true);
-    }
-
-    try {
-      const savedPrefs = localStorage.getItem("borderpay_settings_v1");
-      if (savedPrefs) {
-        const parsed = JSON.parse(savedPrefs);
-        if (parsed.defaultToken) {
-          const found = TOKENS.find((t) => t.symbol === parsed.defaultToken);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      const session = getActiveSession();
+      if (session) {
+        setCurrentUser(session);
+        setReceiver(session.address);
+        if (session.storeName) setMerchantName(session.storeName);
+        if (session.preferredCurrency) {
+          const found = TOKENS.find((t) => t.symbol === session.preferredCurrency);
           if (found) setTokenOut(found.address);
         }
-        if (typeof parsed.reducedMotion === "boolean") {
-          document.documentElement.dataset.reducedMotion = parsed.reducedMotion ? "true" : "false";
-        }
+      } else if (typeof window !== "undefined" && sessionStorage.getItem("borderpay_guest_mode") === "1") {
+        setIsGuest(true);
       }
-    } catch {
-      // Ignore malformed prefs
-    }
-    setIsLoaded(true);
+
+      try {
+        const savedPrefs = localStorage.getItem("borderpay_settings_v1");
+        if (savedPrefs) {
+          const parsed = JSON.parse(savedPrefs);
+          if (parsed.defaultToken) {
+            const found = TOKENS.find((t) => t.symbol === parsed.defaultToken);
+            if (found) setTokenOut(found.address);
+          }
+          if (typeof parsed.reducedMotion === "boolean") {
+            document.documentElement.dataset.reducedMotion = parsed.reducedMotion ? "true" : "false";
+          }
+        }
+      } catch {
+        // Ignore malformed prefs
+      }
+
+      setLocalInvoices(getLocalInvoices());
+      setIsLoaded(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Silent MetaMask account sync & live account/network change listeners
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.ethereum) return;
+
+    const syncAuthorizedWallet = async () => {
+      try {
+        const accounts = await window.ethereum.request({ method: "eth_accounts" });
+        if (accounts && accounts.length > 0) {
+          const addr = accounts[0];
+          setWalletAddress(addr);
+          setReceiver((prev) => prev || addr);
+          const existing = findUserByAddress(addr);
+          if (existing) {
+            setCurrentUser((prev) => prev || existing);
+            if (existing.storeName) setMerchantName((prev) => prev || existing.storeName);
+          }
+        }
+        const cid = await window.ethereum.request({ method: "eth_chainId" });
+        if (cid) setChainId(cid);
+      } catch {
+        // Ignore wallet read restrictions
+      }
+    };
+
+    const handleAccountsChanged = (accounts) => {
+      if (accounts && accounts.length > 0) {
+        const addr = accounts[0];
+        setWalletAddress(addr);
+        setReceiver(addr);
+        const existing = findUserByAddress(addr);
+        if (existing) {
+          setCurrentUser(existing);
+          if (existing.storeName) setMerchantName(existing.storeName);
+        }
+      } else {
+        setWalletAddress("");
+      }
+    };
+
+    const handleChainChanged = (cid) => {
+      if (cid) setChainId(cid);
+    };
+
+    syncAuthorizedWallet();
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
+
+    return () => {
+      window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+      window.ethereum.removeListener("chainChanged", handleChainChanged);
+    };
+  }, []);
+
+  // Sync DB invoices when localStorage changes across tabs or focus returns from /pay
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleSync = () => setLocalInvoices(getLocalInvoices());
+    window.addEventListener("focus", handleSync);
+    window.addEventListener("storage", handleSync);
+    return () => {
+      window.removeEventListener("focus", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
   }, []);
 
   const connectWallet = async () => {
@@ -101,6 +196,8 @@ export default function Home() {
       if (accounts && accounts.length > 0) {
         const addr = accounts[0];
         setWalletAddress(addr);
+        const cid = await window.ethereum.request({ method: "eth_chainId" });
+        if (cid) setChainId(cid);
 
         const existing = findUserByAddress(addr);
         if (existing) {
@@ -125,6 +222,8 @@ export default function Home() {
     setCurrentUser(null);
     setIsGuest(false);
     setWalletAddress("");
+    setEthBalance("0.000");
+    setTokenBalances(EMPTY_BALANCES);
     toast.info("Logout", "Sesi telah dihentikan.");
   };
 
@@ -139,48 +238,71 @@ export default function Home() {
   };
 
   const fetchLiveBalances = useCallback(async () => {
-    if (!walletAddress || typeof window === "undefined" || !window.ethereum) return;
+    if (!effectiveAddress) {
+      await Promise.resolve();
+      setEthBalance("0.000");
+      setTokenBalances(EMPTY_BALANCES);
+      return;
+    }
+
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      
-      // Fetch ETH
+      const useBrowserProvider =
+        Boolean(walletAddress) &&
+        typeof window !== "undefined" &&
+        Boolean(window.ethereum) &&
+        chainId.toLowerCase() === SEPOLIA_CHAIN_ID.toLowerCase();
+
+      const provider = useBrowserProvider
+        ? new ethers.BrowserProvider(window.ethereum)
+        : new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
+
       try {
-        const rawEth = await provider.getBalance(walletAddress);
+        const rawEth = await provider.getBalance(effectiveAddress);
         setEthBalance(parseFloat(ethers.formatEther(rawEth)).toFixed(3));
       } catch {
-        // Fallback
+        setEthBalance("0.000");
       }
 
-      // Fetch tokens
-      const newBals = { ...tokenBalances };
-      for (const t of TOKENS) {
-        try {
-          const c = new ethers.Contract(t.address, ERC20_ABI, provider);
-          const raw = await c.balanceOf(walletAddress);
-          const formatted = parseFloat(ethers.formatUnits(raw, 18)).toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          });
-          newBals[t.symbol] = formatted;
-        } catch {
-          // Keep existing simulated balance
-        }
-      }
+      const newBals = {};
+      await Promise.all(
+        TOKENS.map(async (t) => {
+          const decimals = t.symbol === "mJPY" ? 0 : 2;
+          try {
+            const c = new ethers.Contract(t.address, ERC20_ABI, provider);
+            const raw = await c.balanceOf(effectiveAddress);
+            newBals[t.symbol] = parseFloat(ethers.formatUnits(raw, 18)).toLocaleString("en-US", {
+              minimumFractionDigits: decimals,
+              maximumFractionDigits: decimals,
+            });
+          } catch {
+            newBals[t.symbol] = decimals === 0 ? "0" : "0.00";
+          }
+        })
+      );
       setTokenBalances(newBals);
     } catch {
-      // Ignore network errors
+      // Preserve last fetched balances on transient RPC blip
     }
-  }, [walletAddress, tokenBalances]);
+  }, [effectiveAddress, walletAddress, chainId]);
 
   useEffect(() => {
-    fetchLiveBalances();
-  }, [walletAddress, fetchLiveBalances]);
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) fetchLiveBalances();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchLiveBalances]);
 
   const generateInvoice = (e) => {
     if (e) e.preventDefault();
-    const targetReceiver = receiver || walletAddress || "0x71C7656EC7ab88b098defB751B7401B5f6d89A3F";
+    const targetReceiver = receiver || walletAddress || currentUser?.address || "";
     if (!ethers.isAddress(targetReceiver)) {
-      toast.error("Alamat Tidak Valid", "Alamat wallet penerima harus format 0x (42 karakter).");
+      toast.error(
+        "Alamat Penerima Diperlukan",
+        "Masukkan alamat wallet 0x (42 karakter) atau hubungkan wallet Anda."
+      );
       return;
     }
 
@@ -227,6 +349,7 @@ export default function Home() {
       memo: memo || "Pembayaran BorderPay",
       link: fullLink,
     });
+    refreshLocalInvoices();
 
     toast.success("QR Invoice Dibuat", `${amount} ${selTok.symbol}`);
   };
@@ -247,20 +370,42 @@ export default function Home() {
   }, [deadlineDisplay]);
 
   const fetchOnChainHistory = useCallback(async () => {
+    await Promise.resolve();
     setIsLoadingHistory(true);
+    setHistoryError("");
     try {
-      const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+      const provider = new ethers.JsonRpcProvider(SEPOLIA_RPC_URL);
       const contract = new ethers.Contract(CONTRACT_ADDRESSES.CoinSwapPayment, SWAP_ABI, provider);
 
       const currentBlock = await provider.getBlockNumber();
-      const events = await contract.queryFilter(
+      let events = await contract.queryFilter(
         "PaymentProcessed",
-        Math.max(0, currentBlock - 8000),
+        Math.max(0, currentBlock - 45000),
         currentBlock
       );
 
+      if ((!events || events.length === 0) && currentBlock > 45000) {
+        events = await contract.queryFilter(
+          "PaymentProcessed",
+          Math.max(0, currentBlock - 95000),
+          Math.max(0, currentBlock - 45001)
+        );
+      }
+
       if (events && events.length > 0) {
-        const formatted = events.reverse().map((ev, idx) => {
+        const sortedEvents = [...events].reverse();
+        const blockTimestampMap = {};
+        const uniqueBlocks = [...new Set(sortedEvents.slice(0, 20).map((ev) => ev.blockNumber))];
+        await Promise.allSettled(
+          uniqueBlocks.map(async (blkNum) => {
+            const blk = await provider.getBlock(blkNum);
+            if (blk?.timestamp) {
+              blockTimestampMap[blkNum] = Number(blk.timestamp) * 1000;
+            }
+          })
+        );
+
+        const formatted = sortedEvents.map((ev) => {
           const tIn =
             TOKENS.find((t) => t.address.toLowerCase() === ev.args.tokenIn.toLowerCase())?.symbol ||
             "TOKEN";
@@ -268,9 +413,11 @@ export default function Home() {
             TOKENS.find((t) => t.address.toLowerCase() === ev.args.tokenOut.toLowerCase())?.symbol ||
             "TOKEN";
           const isSwap = tIn !== tOut;
+          const tsMs = blockTimestampMap[ev.blockNumber] || 0;
           return {
-            id: ev.transactionHash,
-            time: `${Math.max(2, (idx + 1) * 7)} menit lalu`,
+            id: `${ev.transactionHash}-${ev.index ?? 0}`,
+            timestamp: tsMs,
+            time: tsMs ? formatRelativeTimeId(tsMs) : `Blok #${ev.blockNumber}`,
             type: isSwap ? "Swap" : "Transfer",
             txHash: ev.transactionHash,
             orderId: ev.args.orderId,
@@ -278,97 +425,37 @@ export default function Home() {
             receiver: ev.args.receiver,
             tokenInSymbol: tIn,
             tokenOutSymbol: tOut,
-            pair: `${tIn}/${tOut}`,
-            amountIn: parseFloat(ethers.formatUnits(ev.args.amountIn, 18)).toFixed(2),
-            amountOut: parseFloat(ethers.formatUnits(ev.args.amountOut, 18)).toFixed(2),
+            pair: isSwap ? `${tIn}/${tOut}` : tIn,
+            amountIn: parseFloat(ethers.formatUnits(ev.args.amountIn, 18)).toLocaleString("en-US", {
+              minimumFractionDigits: tIn === "mJPY" ? 0 : 2,
+              maximumFractionDigits: tIn === "mJPY" ? 0 : 2,
+            }),
+            amountOut: parseFloat(ethers.formatUnits(ev.args.amountOut, 18)).toLocaleString("en-US", {
+              minimumFractionDigits: tOut === "mJPY" ? 0 : 2,
+              maximumFractionDigits: tOut === "mJPY" ? 0 : 2,
+            }),
             blockNumber: ev.blockNumber,
           };
         });
         setHistory(formatted);
       } else {
-        // High-fidelity baseline history matching Figma design
-        setHistory([
-          {
-            id: "tx-1",
-            time: "2 menit lalu",
-            type: "Swap",
-            pair: "mUSD/mEUR",
-            amountIn: "100.00",
-            amountOut: "92.00",
-            tokenInSymbol: "mUSD",
-            tokenOutSymbol: "mEUR",
-            receiver: "0x3B1d2491b9c948a08e1a84c41b71c7656ec7ab88b0",
-            sender: "0x811cE004b9c948a08e1a84c41b71c7656ec7ab88b0",
-            txHash: "0x9f2a2491b9c948a08e1a84c41b71c7656ec7ab88b0",
-            blockNumber: 6429183,
-          },
-          {
-            id: "tx-2",
-            time: "15 menit lalu",
-            type: "Transfer",
-            pair: "mUSD",
-            amountIn: "250.00",
-            amountOut: "250.00",
-            tokenInSymbol: "mUSD",
-            tokenOutSymbol: "mUSD",
-            receiver: "0x7F2a29C1b9c948a08e1a84c41b71c7656ec7ab88b0",
-            sender: "0x811cE004b9c948a08e1a84c41b71c7656ec7ab88b0",
-            txHash: "0x51de07a3b9c948a08e1a84c41b71c7656ec7ab88b0",
-            blockNumber: 6429175,
-          },
-          {
-            id: "tx-3",
-            time: "32 menit lalu",
-            type: "Swap",
-            pair: "mJPY/mUSD",
-            amountIn: "15,000.00",
-            amountOut: "98.10",
-            tokenInSymbol: "mJPY",
-            tokenOutSymbol: "mUSD",
-            receiver: "0x14D2f922b9c948a08e1a84c41b71c7656ec7ab88b0",
-            sender: "0x3B1d2491b9c948a08e1a84c41b71c7656ec7ab88b0",
-            txHash: "0xb83cf2d9b9c948a08e1a84c41b71c7656ec7ab88b0",
-            blockNumber: 6429160,
-          },
-          {
-            id: "tx-4",
-            time: "1 jam lalu",
-            type: "Swap",
-            pair: "mJPY/mUSD",
-            amountIn: "10,000.00",
-            amountOut: "66.70",
-            tokenInSymbol: "mJPY",
-            tokenOutSymbol: "mUSD",
-            receiver: "0x9928325bb9c948a08e1a84c41b71c7656ec7ab88b0",
-            sender: "0x811cE004b9c948a08e1a84c41b71c7656ec7ab88b0",
-            txHash: "0x2e7a93fcb9c948a08e1a84c41b71c7656ec7ab88b0",
-            blockNumber: 6429142,
-          },
-          {
-            id: "tx-5",
-            time: "2 jam lalu",
-            type: "Transfer",
-            pair: "mEUR",
-            amountIn: "20.00",
-            amountOut: "21.74",
-            tokenInSymbol: "mEUR",
-            tokenOutSymbol: "mEUR",
-            receiver: "0x811cE004b9c948a08e1a84c41b71c7656ec7ab88b0",
-            sender: "0x3B1d2491b9c948a08e1a84c41b71c7656ec7ab88b0",
-            txHash: "0xd4a16b58b9c948a08e1a84c41b71c7656ec7ab88b0",
-            blockNumber: 6429120,
-          },
-        ]);
+        setHistory([]);
       }
     } catch {
-      // Fallback baseline
+      setHistoryError("Tidak dapat memuat log transaksi dari RPC Sepolia saat ini.");
     } finally {
       setIsLoadingHistory(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchOnChainHistory();
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) fetchOnChainHistory();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [fetchOnChainHistory]);
 
   const formatTimer = (seconds) => {
@@ -466,7 +553,6 @@ export default function Home() {
     toast.success("CSV Diunduh", `${history.length} transaksi diekspor.`);
   };
 
-  // If user is not logged in and didn't opt for guest mode, show AuthLandingView
   if (isLoaded && !currentUser && !isGuest) {
     return (
       <AuthLandingView
@@ -503,15 +589,17 @@ export default function Home() {
     <div className="min-h-screen text-[#0B192C] flex flex-col relative selection:bg-blue-600 selection:text-white">
       <OceanBackdrop variant={isOceanHero ? "ocean" : "light"} />
 
-      {/* Floating Top Navigation Bar (Matching Figma Design) */}
       <TopNavbar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         isOceanHeader={isOceanHero}
         walletAddress={walletAddress}
+        effectiveAddress={effectiveAddress}
         onConnectWallet={connectWallet}
         onDisconnectWallet={handleLogout}
         currentUser={currentUser}
+        history={history}
+        localInvoices={localInvoices}
         onOpenScanner={() => setIsScannerOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenAssetModal={() => setIsAssetModalOpen(true)}
@@ -519,99 +607,95 @@ export default function Home() {
         onOpenGuide={() => setIsGuideOpen(true)}
       />
 
-      {/* Main Content Viewport with smooth view transition on tab switch */}
       <main className="flex-1 max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div key={activeTab} className="animate-view-enter">
-        {activeTab === "overview" || activeTab === "dashboard" ? (
-          <OverviewView
-            walletAddress={walletAddress}
-            tokenBalances={tokenBalances}
-            ethBalance={ethBalance}
-            history={history}
-            onSelectTab={setActiveTab}
-            onOpenScanner={() => setIsScannerOpen(true)}
-            onOpenAssetModal={() => setIsAssetModalOpen(true)}
-            onOpenGuide={() => setIsGuideOpen(true)}
-            onOpenReceipt={(tx) => setSelectedTx(tx)}
-            onQuickCreateInvoice={(sym) => {
-              const found = TOKENS.find((t) => t.symbol === sym);
-              if (found) setTokenOut(found.address);
-              setActiveTab("terminal");
-            }}
-          />
-        ) : activeTab === "terminal" || activeTab === "create" ? (
-          <CreateQrView
-            receiver={receiver}
-            setReceiver={setReceiver}
-            amount={amount}
-            setAmount={setAmount}
-            tokenOut={tokenOut}
-            setTokenOut={setTokenOut}
-            memo={memo}
-            setMemo={setMemo}
-            expiryMinutes={expiryMinutes}
-            setExpiryMinutes={setExpiryMinutes}
-            merchantName={merchantName}
-            setMerchantName={setMerchantName}
-            onGenerate={generateInvoice}
-            walletAddress={walletAddress}
-            paymentLink={paymentLink}
-            orderIdDisplay={orderIdDisplay}
-            timeRemaining={timeRemaining}
-            formatTimer={formatTimer}
-            downloadQrCode={downloadQrCode}
-            copyPaymentLink={copyPaymentLink}
-            copiedLink={copiedLink}
-          />
-        ) : activeTab === "rates" ? (
-          <LiveRatesCard />
-        ) : activeTab === "ledger" ? (
-          <LedgerView
-            history={history}
-            isLoading={isLoadingHistory}
-            onRefresh={fetchOnChainHistory}
-            onExportCsv={exportLedgerCsv}
-            onOpenReceipt={(tx) => setSelectedTx(tx)}
-          />
-        ) : activeTab === "settings" ? (
-          <SettingsView
-            currentUser={currentUser}
-            walletAddress={walletAddress}
-            onDefaultTokenChange={(sym) => {
-              const found = TOKENS.find((t) => t.symbol === sym);
-              if (found) setTokenOut(found.address);
-            }}
-            onUserUpdated={(user) => {
-              setCurrentUser(user);
-              if (user?.storeName) setMerchantName(user.storeName);
-            }}
-          />
-        ) : (
-          <OverviewView
-            walletAddress={walletAddress}
-            tokenBalances={tokenBalances}
-            ethBalance={ethBalance}
-            history={history}
-            onSelectTab={setActiveTab}
-            onOpenScanner={() => setIsScannerOpen(true)}
-            onOpenAssetModal={() => setIsAssetModalOpen(true)}
-            onOpenGuide={() => setIsGuideOpen(true)}
-            onOpenReceipt={(tx) => setSelectedTx(tx)}
-            onQuickCreateInvoice={(sym) => {
-              const found = TOKENS.find((t) => t.symbol === sym);
-              if (found) setTokenOut(found.address);
-              setActiveTab("terminal");
-            }}
-          />
-        )}
+          {activeTab === "terminal" || activeTab === "create" ? (
+            <CreateQrView
+              receiver={receiver}
+              setReceiver={setReceiver}
+              amount={amount}
+              setAmount={setAmount}
+              tokenOut={tokenOut}
+              setTokenOut={setTokenOut}
+              memo={memo}
+              setMemo={setMemo}
+              expiryMinutes={expiryMinutes}
+              setExpiryMinutes={setExpiryMinutes}
+              merchantName={merchantName}
+              setMerchantName={setMerchantName}
+              onGenerate={generateInvoice}
+              walletAddress={effectiveAddress}
+              paymentLink={paymentLink}
+              orderIdDisplay={orderIdDisplay}
+              timeRemaining={timeRemaining}
+              formatTimer={formatTimer}
+              downloadQrCode={downloadQrCode}
+              copyPaymentLink={copyPaymentLink}
+              copiedLink={copiedLink}
+            />
+          ) : activeTab === "rates" ? (
+            <LiveRatesCard />
+          ) : activeTab === "ledger" ? (
+            <LedgerView
+              history={history}
+              isLoading={isLoadingHistory}
+              historyError={historyError}
+              walletAddress={effectiveAddress}
+              onRefresh={fetchOnChainHistory}
+              onExportCsv={exportLedgerCsv}
+              onOpenReceipt={(tx) => setSelectedTx(tx)}
+            />
+          ) : activeTab === "settings" ? (
+            <SettingsView
+              currentUser={currentUser}
+              walletAddress={walletAddress}
+              onDefaultTokenChange={(sym) => {
+                const found = TOKENS.find((t) => t.symbol === sym);
+                if (found) setTokenOut(found.address);
+              }}
+              onUserUpdated={(user) => {
+                setCurrentUser(user);
+                if (user?.storeName) setMerchantName(user.storeName);
+              }}
+            />
+          ) : (
+            <OverviewView
+              walletAddress={walletAddress}
+              effectiveAddress={effectiveAddress}
+              currentUser={currentUser}
+              tokenBalances={tokenBalances}
+              ethBalance={ethBalance}
+              history={history}
+              localInvoices={localInvoices}
+              isLoadingHistory={isLoadingHistory}
+              historyError={historyError}
+              onRefreshActivity={() => {
+                fetchLiveBalances();
+                fetchOnChainHistory();
+                refreshLocalInvoices();
+              }}
+              onConnectWallet={connectWallet}
+              onSelectTab={setActiveTab}
+              onOpenScanner={() => setIsScannerOpen(true)}
+              onOpenAssetModal={() => setIsAssetModalOpen(true)}
+              onOpenHistory={() => setIsHistoryOpen(true)}
+              onOpenGuide={() => setIsGuideOpen(true)}
+              onOpenReceipt={(tx) => setSelectedTx(tx)}
+              onQuickCreateInvoice={(sym) => {
+                const found = TOKENS.find((t) => t.symbol === sym);
+                if (found) setTokenOut(found.address);
+                setActiveTab("terminal");
+              }}
+            />
+          )}
         </div>
       </main>
 
-      {/* Global Modals */}
       <TokenBalancesModal
         isOpen={isAssetModalOpen}
         onClose={() => setIsAssetModalOpen(false)}
         walletAddress={walletAddress}
+        currentUser={currentUser}
       />
 
       <AuthModal
@@ -636,6 +720,8 @@ export default function Home() {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         onRecreateInvoice={handleRecreateInvoice}
+        history={history}
+        onInvoicesChanged={refreshLocalInvoices}
       />
       <OnboardingGuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
 

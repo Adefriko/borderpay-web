@@ -46,11 +46,11 @@ export default function CreateQrView({
     ? `${receiver.slice(0, 6)}...${receiver.slice(-4)}`
     : walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : "0x71C7...9A3F";
+    : "Belum diisi";
 
   const shortOrderId = orderIdDisplay
     ? `${orderIdDisplay.slice(0, 12)}...`
-    : "INV-7F3A-2291";
+    : "Draft QR";
 
   const useConnectedWallet = () => {
     if (walletAddress) {

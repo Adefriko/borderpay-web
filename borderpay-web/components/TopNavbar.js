@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { buildLiveNotifications, formatShortAddress } from "../lib/activityUtils";
 import {
   IconBorderPayMark,
   IconDashboard,
@@ -20,9 +21,12 @@ export default function TopNavbar({
   onSelectTab,
   isOceanHeader = true,
   walletAddress = "",
+  effectiveAddress = "",
   onConnectWallet,
   onDisconnectWallet,
   currentUser = null,
+  history = [],
+  localInvoices = [],
   onOpenScanner,
   onOpenHistory,
   onOpenAssetModal,
@@ -31,47 +35,7 @@ export default function TopNavbar({
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifFilter, setNotifFilter] = useState("all"); // "all" | "unread"
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      title: "Wallet terhubung",
-      desc: "Wallet berhasil terhubung ke Sepolia Testnet.",
-      time: "Baru saja",
-      unread: true,
-      tone: "blue",
-      actionLabel: null,
-    },
-    {
-      id: "notif-2",
-      title: "QR invoice dibuat",
-      desc: "Invoice ORD-20931 sebesar 25.00 mUSD berhasil dibuat.",
-      time: "2 menit lalu",
-      unread: true,
-      tone: "emerald",
-      actionLabel: "Lihat Invoice",
-      actionType: "history",
-    },
-    {
-      id: "notif-3",
-      title: "Invoice kedaluwarsa",
-      desc: "Invoice ORD-20874 telah melewati batas waktu pembayaran.",
-      time: "1 jam lalu",
-      unread: false,
-      tone: "amber",
-      actionLabel: "Buat Ulang",
-      actionType: "create",
-    },
-    {
-      id: "notif-4",
-      title: "Pembayaran dikonfirmasi",
-      desc: "Swap 100.00 mUSD → 92.00 mEUR selesai di kontrak Sepolia.",
-      time: "3 jam lalu",
-      unread: true,
-      tone: "emerald",
-      actionLabel: "Lihat Ledger",
-      actionType: "ledger",
-    },
-  ]);
+  const [readIds, setReadIds] = useState({});
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
 
@@ -91,27 +55,39 @@ export default function TopNavbar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const rawNotifications = buildLiveNotifications({
+    walletAddress,
+    currentUser,
+    localInvoices,
+    history,
+  });
+  const notifications = rawNotifications.map((n) => ({
+    ...n,
+    unread: n.unread && !readIds[n.id],
+  }));
+
   const unreadCount = notifications.filter((n) => n.unread).length;
   const visibleNotifications =
     notifFilter === "unread" ? notifications.filter((n) => n.unread) : notifications;
 
   const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    const next = { ...readIds };
+    for (const n of notifications) next[n.id] = true;
+    setReadIds(next);
   };
 
   const handleNotifAction = (notif) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n))
-    );
+    setReadIds((prev) => ({ ...prev, [notif.id]: true }));
     setShowNotifications(false);
     if (notif.actionType === "history" && onOpenHistory) onOpenHistory();
     else if (notif.actionType === "create" && onSelectTab) onSelectTab("terminal");
     else if (notif.actionType === "ledger" && onSelectTab) onSelectTab("ledger");
+    else if (notif.actionType === "assets" && onOpenAssetModal) onOpenAssetModal();
+    else if (notif.actionType === "auth" && onOpenAuthModal) onOpenAuthModal();
   };
 
-  const formattedAddress = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : "";
+  const displayAddress = effectiveAddress || walletAddress || currentUser?.address || "";
+  const formattedAddress = formatShortAddress(displayAddress);
 
   const isOverviewActive = activeTab === "overview" || activeTab === "dashboard";
   const isCreateActive = activeTab === "terminal" || activeTab === "create";

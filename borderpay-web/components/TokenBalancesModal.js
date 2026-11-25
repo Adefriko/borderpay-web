@@ -5,41 +5,59 @@ import { TOKENS, CONTRACT_ADDRESSES, ERC20_ABI, SEPOLIA_CHAIN_ID } from "../cons
 import { TokenIcon, IconCopy, IconCheck, IconExternalLink, IconRefresh } from "./Icons";
 import { useToast } from "./ToastContext";
 
-export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
+export default function TokenBalancesModal({ isOpen, onClose, walletAddress, currentUser = null }) {
   const toast = useToast();
   const [balances, setBalances] = useState({
-    mUSD: "10,000.00",
-    mEUR: "10,000.00",
-    mJPY: "1.0M",
+    mUSD: "0.00",
+    mEUR: "0.00",
+    mJPY: "0",
   });
-  const [ethBalance, setEthBalance] = useState("0.4821");
+  const [ethBalance, setEthBalance] = useState("0.0000");
   const [chainId, setChainId] = useState(SEPOLIA_CHAIN_ID);
   const [loading, setLoading] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState("");
   const [addedTokens, setAddedTokens] = useState({});
 
+  const effectiveAddress = walletAddress || currentUser?.address || "";
+
   const fetchAllBalances = useCallback(async () => {
-    if (!walletAddress || typeof window === "undefined" || !window.ethereum) return;
+    if (!effectiveAddress) {
+      setEthBalance("0.0000");
+      setBalances({ mUSD: "0.00", mEUR: "0.00", mJPY: "0" });
+      return;
+    }
     setLoading(true);
     try {
-      const chain = await window.ethereum.request({ method: "eth_chainId" });
-      setChainId(chain || SEPOLIA_CHAIN_ID);
+      let currentChain = SEPOLIA_CHAIN_ID;
+      let provider;
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const ethBal = await provider.getBalance(walletAddress);
+      if (walletAddress && typeof window !== "undefined" && window.ethereum) {
+        currentChain = (await window.ethereum.request({ method: "eth_chainId" })) || SEPOLIA_CHAIN_ID;
+        setChainId(currentChain);
+        provider =
+          currentChain.toLowerCase() === SEPOLIA_CHAIN_ID.toLowerCase()
+            ? new ethers.BrowserProvider(window.ethereum)
+            : new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+      } else {
+        setChainId(SEPOLIA_CHAIN_ID);
+        provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+      }
+
+      const ethBal = await provider.getBalance(effectiveAddress);
       setEthBalance(parseFloat(ethers.formatEther(ethBal)).toFixed(4));
 
       const newBals = {};
       for (const token of TOKENS) {
         try {
           const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
-          const bal = await contract.balanceOf(walletAddress);
+          const bal = await contract.balanceOf(effectiveAddress);
+          const decimals = token.symbol === "mJPY" ? 0 : 2;
           newBals[token.symbol] = parseFloat(ethers.formatUnits(bal, 18)).toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
           });
         } catch {
-          newBals[token.symbol] = "0.00";
+          newBals[token.symbol] = token.symbol === "mJPY" ? "0" : "0.00";
         }
       }
       setBalances(newBals);
@@ -48,13 +66,13 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
     } finally {
       setLoading(false);
     }
-  }, [walletAddress]);
+  }, [effectiveAddress, walletAddress]);
 
   useEffect(() => {
-    if (isOpen && walletAddress) {
+    if (isOpen) {
       fetchAllBalances();
     }
-  }, [isOpen, walletAddress, fetchAllBalances]);
+  }, [isOpen, fetchAllBalances]);
 
   const switchToSepolia = async () => {
     if (!window.ethereum) return;
@@ -106,9 +124,9 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
 
   const isWrongNetwork = walletAddress && chainId.toLowerCase() !== SEPOLIA_CHAIN_ID.toLowerCase();
   const isLowEth = parseFloat(ethBalance || "0") < 0.002;
-  const shortWallet = walletAddress
-    ? `${walletAddress.slice(0, 6)}..${walletAddress.slice(-4)}`
-    : "0x3B1d..8eA0";
+  const shortWallet = effectiveAddress
+    ? `${effectiveAddress.slice(0, 6)}..${effectiveAddress.slice(-4)}`
+    : "Belum terhubung";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-md animate-fadeIn">
@@ -121,7 +139,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
               ⊞
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-[#0B192C]">Dompet & Saldo Simulasi</h3>
+              <h3 className="text-base font-extrabold text-[#0B192C]">Dompet & Saldo Sepolia</h3>
               <p className="text-xs text-slate-500 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                 <span>Ethereum Sepolia Testnet</span>
@@ -141,19 +159,19 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold">
-              ● {walletAddress ? "WALLET TERHUBUNG" : "DEMO PREVIEW"}
+              ● {walletAddress ? "WALLET TERHUBUNG" : effectiveAddress ? "SEPOLIA RPC" : "BELUM TERHUBUNG"}
             </span>
             <button
               type="button"
-              onClick={() => walletAddress && copyToClipboard(walletAddress, "wallet")}
+              onClick={() => effectiveAddress && copyToClipboard(effectiveAddress, "wallet")}
               className="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-mono font-bold text-[#0B192C] flex items-center gap-1.5 transition cursor-pointer"
             >
               <span>{shortWallet}</span>
               {copiedAddress === "wallet" ? (
                 <IconCheck className="w-3 h-3 text-emerald-600" />
-              ) : (
+              ) : effectiveAddress ? (
                 <IconCopy className="w-3 h-3 text-slate-500" />
-              )}
+              ) : null}
             </button>
           </div>
 
