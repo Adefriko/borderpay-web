@@ -54,29 +54,26 @@ export function IconBorderPayMark({ className = "w-9 h-9" }) {
 
 export function TokenIcon({ symbol, size = "w-6 h-6" }) {
   switch (symbol?.toUpperCase()) {
+    case "USDC":
     case "MUSD":
       return (
         <span className={`${size} inline-flex items-center justify-center rounded-full bg-blue-600 text-white font-extrabold text-xs shadow-sm shadow-blue-600/30 flex-shrink-0`}>
           $
         </span>
       );
-    case "MEUR":
-      return (
-        <span className={`${size} inline-flex items-center justify-center rounded-full bg-sky-500 text-white font-extrabold text-xs shadow-sm shadow-sky-500/30 flex-shrink-0`}>
-          €
-        </span>
-      );
-    case "MJPY":
-      return (
-        <span className={`${size} inline-flex items-center justify-center rounded-full bg-purple-600 text-white font-extrabold text-xs shadow-sm shadow-purple-600/30 flex-shrink-0`}>
-          ¥
-        </span>
-      );
     case "ETH":
+    case "MEUR":
     case "SEPOLIA":
       return (
         <span className={`${size} inline-flex items-center justify-center rounded-full bg-slate-900 text-slate-100 font-extrabold text-xs shadow-sm flex-shrink-0`}>
           Ξ
+        </span>
+      );
+    case "LINK":
+    case "MJPY":
+      return (
+        <span className={`${size} inline-flex items-center justify-center rounded-full bg-indigo-600 text-white font-extrabold text-xs shadow-sm shadow-indigo-600/30 flex-shrink-0`}>
+          ⬡
         </span>
       );
     default:

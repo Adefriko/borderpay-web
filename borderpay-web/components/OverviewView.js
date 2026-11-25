@@ -17,25 +17,25 @@ import {
 import { useToast } from "./ToastContext";
 
 const SIMULATED_RATES = {
-  "mUSD->mEUR": 0.92,
-  "mEUR->mUSD": 1.087,
-  "mUSD->mJPY": 150,
-  "mJPY->mUSD": 0.006667,
-  "mEUR->mJPY": 163,
-  "mJPY->mEUR": 0.006135,
+  "USDC->ETH": 0.0004,
+  "ETH->USDC": 2500,
+  "USDC->LINK": 0.0667,
+  "LINK->USDC": 15,
+  "ETH->LINK": 166.67,
+  "LINK->ETH": 0.006,
 };
 
 const HERO_NODES = [
-  { symbol: "mUSD", quoteTo: "mEUR" },
-  { symbol: "mEUR", quoteTo: "mUSD" },
-  { symbol: "mJPY", quoteTo: "mUSD" },
+  { symbol: "USDC", quoteTo: "ETH" },
+  { symbol: "ETH", quoteTo: "USDC" },
+  { symbol: "LINK", quoteTo: "USDC" },
 ];
 
 export default function OverviewView({
   walletAddress = "",
   effectiveAddress = "",
   currentUser = null,
-  tokenBalances = { mUSD: "0.00", mEUR: "0.00", mJPY: "0" },
+  tokenBalances = { USDC: "0.00", ETH: "0.00", LINK: "0.00" },
   ethBalance = "0.000",
   history = [],
   localInvoices = [],
@@ -54,11 +54,11 @@ export default function OverviewView({
   const toast = useToast();
   const [copiedHeroWallet, setCopiedHeroWallet] = useState(false);
   const [activeChartFilter, setActiveChartFilter] = useState("7d");
-  const [swapInAmount, setSwapInAmount] = useState("1000");
-  const [swapInSymbol, setSwapInSymbol] = useState("mUSD");
-  const [swapOutSymbol, setSwapOutSymbol] = useState("mEUR");
+  const [swapInAmount, setSwapInAmount] = useState("100");
+  const [swapInSymbol, setSwapInSymbol] = useState("USDC");
+  const [swapOutSymbol, setSwapOutSymbol] = useState("ETH");
   const [swapRotated, setSwapRotated] = useState(false);
-  const [selectedHeroToken, setSelectedHeroToken] = useState("mUSD");
+  const [selectedHeroToken, setSelectedHeroToken] = useState("USDC");
   const [nowSec] = useState(() => Math.floor(Date.now() / 1000));
 
   const activeAddress = effectiveAddress || walletAddress || currentUser?.address || "";
@@ -81,8 +81,8 @@ export default function OverviewView({
       : SIMULATED_RATES[`${swapInSymbol}->${swapOutSymbol}`] || 1;
   const parsedIn = parseFloat(swapInAmount.replace(/,/g, "")) || 0;
   const computedOut = (parsedIn * pairRate).toLocaleString("en-US", {
-    minimumFractionDigits: swapOutSymbol === "mJPY" ? 0 : 2,
-    maximumFractionDigits: swapOutSymbol === "mJPY" ? 0 : 2,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
   });
 
   const handleFlipSwap = () => {
@@ -96,9 +96,7 @@ export default function OverviewView({
   const heroRate =
     SIMULATED_RATES[`${activeHeroNode.symbol}->${activeHeroNode.quoteTo}`] || 1;
   const heroRateLabel = heroRate < 0.01 ? heroRate.toFixed(4) : heroRate;
-  const heroBalance =
-    tokenBalances?.[activeHeroNode.symbol] ??
-    (activeHeroNode.symbol === "mJPY" ? "0" : "0.00");
+  const heroBalance = tokenBalances?.[activeHeroNode.symbol] ?? "0.00";
 
   // Live DB, wallet, and Sepolia blockchain aggregations
   const walletHistory = activeAddress
@@ -143,11 +141,11 @@ export default function OverviewView({
         kind: "inv",
         inv,
         badge: paid
-          ? `TERBAYAR • ${inv.tokenSymbol || "mUSD"}`
+          ? `TERBAYAR • ${inv.tokenSymbol || "USDC"}`
           : expired
-          ? `KEDALUWARSA • ${inv.tokenSymbol || "mUSD"}`
-          : `INVOICE LOKAL • ${inv.tokenSymbol || "mUSD"}`,
-        primaryText: `${inv.amount} ${inv.tokenSymbol || "mUSD"}`,
+          ? `KEDALUWARSA • ${inv.tokenSymbol || "USDC"}`
+          : `INVOICE LOKAL • ${inv.tokenSymbol || "USDC"}`,
+        primaryText: `${inv.amount} ${inv.tokenSymbol || "USDC"}`,
         subText: inv.memo || formatRelativeTimeId(inv.createdAt),
         tone: paid ? "emerald" : expired ? "amber" : "sky",
       });
@@ -219,7 +217,7 @@ export default function OverviewView({
         </button>
       </div>
 
-      {/* 2. Top Hero Section (Responsive Grid: stacked <1024px, 3 columns >=1024px) */}
+      {/* 2. Top Hero Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch stagger-1">
         {/* Left Column: Real Wallet / Session Card */}
         <div className="lg:col-span-4 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 sm:space-y-5 text-white transition-transform duration-300 hover:-translate-y-0.5">
@@ -285,7 +283,7 @@ export default function OverviewView({
             </div>
 
             <div className="pt-1 sm:pt-2">
-              <span className="text-[11px] text-white/75 font-medium block">Saldo Sepolia ETH</span>
+              <span className="text-[11px] text-white/75 font-medium block">Saldo Sepolia ETH (Gas)</span>
               <div className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mt-0.5">
                 {ethBalance} <span className="text-sm font-bold text-white/75">ETH</span>
               </div>
@@ -464,7 +462,7 @@ export default function OverviewView({
           </div>
         </div>
 
-        {/* Right Column: Live Activity Feed (Sepolia On-Chain + DB Invoices) */}
+        {/* Right Column: Live Activity Feed */}
         <div className="lg:col-span-4 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl glass-hero-ocean glass-sheen-hover flex flex-col justify-between space-y-4 text-white transition-transform duration-300 hover:-translate-y-0.5">
           <div className="space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-white/25">
@@ -563,9 +561,9 @@ export default function OverviewView({
 
             <div className="space-y-3">
               {[
-                { sym: "mUSD", badge: "mU", color: "bg-[#1951FC]", val: tokenBalances.mUSD || "0.00" },
-                { sym: "mEUR", badge: "mE", color: "bg-indigo-600", val: tokenBalances.mEUR || "0.00" },
-                { sym: "mJPY", badge: "mJ", color: "bg-teal-500", val: tokenBalances.mJPY || "0" },
+                { sym: "USDC", badge: "$", color: "bg-[#1951FC]", val: tokenBalances.USDC || "0.00" },
+                { sym: "ETH", badge: "Ξ", color: "bg-indigo-600", val: tokenBalances.ETH || "0.00" },
+                { sym: "LINK", badge: "⬡", color: "bg-sky-600", val: tokenBalances.LINK || "0.00" },
               ].map((tok) => (
                 <button
                   key={tok.sym}
@@ -756,7 +754,7 @@ export default function OverviewView({
         </div>
       </div>
 
-      {/* 4. Lower Row (Interactive Kalkulator Swap + Live Transaksi On-Chain Terbaru) */}
+      {/* 4. Lower Row */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-stretch">
         <div className="lg:col-span-5 min-w-0 p-4 sm:p-6 lg:p-7 rounded-3xl surface-card flex flex-col justify-between space-y-4">
           <div className="space-y-4">
@@ -860,7 +858,7 @@ export default function OverviewView({
             </button>
           </div>
 
-          {/* Mobile Card Layout (Prevents table clipping on narrow phones) */}
+          {/* Mobile Card Layout */}
           <div className="sm:hidden space-y-2.5">
             {recentTableTxs.length === 0 ? (
               <div className="py-8 text-center space-y-2">

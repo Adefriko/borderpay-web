@@ -8,16 +8,31 @@ export const CONTRACT_ADDRESSES = {
 };
 
 export const TOKENS = [
-  { symbol: "mUSD", name: "Mock USD", address: CONTRACT_ADDRESSES.mUSD },
-  { symbol: "mEUR", name: "Mock EUR", address: CONTRACT_ADDRESSES.mEUR },
-  { symbol: "mJPY", name: "Mock JPY", address: CONTRACT_ADDRESSES.mJPY },
+  {
+    symbol: "USDC",
+    name: "USD Coin (Sepolia Mock)",
+    coingeckoId: "usd-coin",
+    address: CONTRACT_ADDRESSES.mUSD,
+  },
+  {
+    symbol: "ETH",
+    name: "Ethereum (Sepolia Mock)",
+    coingeckoId: "ethereum",
+    address: CONTRACT_ADDRESSES.mEUR,
+  },
+  {
+    symbol: "LINK",
+    name: "Chainlink (Sepolia Mock)",
+    coingeckoId: "chainlink",
+    address: CONTRACT_ADDRESSES.mJPY,
+  },
 ];
 
 export const ERC20_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
-  "function symbol() view returns (string)"
+  "function symbol() view returns (string)",
 ];
 
 export const SWAP_ABI = [
@@ -26,5 +41,5 @@ export const SWAP_ABI = [
   "function quoteSwap(address tokenIn, address tokenOut, uint256 amountIn) view returns (uint256)",
   "function quoteRequiredIn(address tokenIn, address tokenOut, uint256 amountOut) view returns (uint256)",
   "function mockRates(address tokenIn, address tokenOut) view returns (uint256)",
-  "event PaymentProcessed(bytes32 indexed orderId, address indexed sender, address indexed receiver, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)"
+  "event PaymentProcessed(bytes32 indexed orderId, address indexed sender, address indexed receiver, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut)",
 ];

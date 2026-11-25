@@ -29,9 +29,9 @@ import { saveLocalInvoice, getLocalInvoices } from "../lib/invoiceStore";
 import { formatRelativeTimeId } from "../lib/activityUtils";
 
 const EMPTY_BALANCES = {
-  mUSD: "0.00",
-  mEUR: "0.00",
-  mJPY: "0",
+  USDC: "0.00",
+  ETH: "0.00",
+  LINK: "0.00",
 };
 
 const SEPOLIA_RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com";
@@ -39,7 +39,7 @@ const SEPOLIA_RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com";
 export default function Home() {
   const toast = useToast();
 
-  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "terminal" | "rates" | "ledger" | "settings"
+  const [activeTab, setActiveTab] = useState("overview");
   const [walletAddress, setWalletAddress] = useState("");
   const [chainId, setChainId] = useState(SEPOLIA_CHAIN_ID);
   const [currentUser, setCurrentUser] = useState(null);
@@ -79,7 +79,6 @@ export default function Home() {
     setLocalInvoices(getLocalInvoices());
   }, []);
 
-  // Load saved session, settings, and local DB invoices on mount
   useEffect(() => {
     let active = true;
     Promise.resolve().then(() => {
@@ -121,7 +120,6 @@ export default function Home() {
     };
   }, []);
 
-  // Silent MetaMask account sync & live account/network change listeners
   useEffect(() => {
     if (typeof window === "undefined" || !window.ethereum) return;
 
@@ -174,7 +172,6 @@ export default function Home() {
     };
   }, []);
 
-  // Sync DB invoices when localStorage changes across tabs or focus returns from /pay
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleSync = () => setLocalInvoices(getLocalInvoices());
@@ -266,22 +263,21 @@ export default function Home() {
       const newBals = {};
       await Promise.all(
         TOKENS.map(async (t) => {
-          const decimals = t.symbol === "mJPY" ? 0 : 2;
           try {
             const c = new ethers.Contract(t.address, ERC20_ABI, provider);
             const raw = await c.balanceOf(effectiveAddress);
             newBals[t.symbol] = parseFloat(ethers.formatUnits(raw, 18)).toLocaleString("en-US", {
-              minimumFractionDigits: decimals,
-              maximumFractionDigits: decimals,
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 3,
             });
           } catch {
-            newBals[t.symbol] = decimals === 0 ? "0" : "0.00";
+            newBals[t.symbol] = "0.00";
           }
         })
       );
       setTokenBalances(newBals);
     } catch {
-      // Preserve last fetched balances on transient RPC blip
+      // Preserve last fetched balances
     }
   }, [effectiveAddress, walletAddress, chainId]);
 
@@ -427,12 +423,12 @@ export default function Home() {
             tokenOutSymbol: tOut,
             pair: isSwap ? `${tIn}/${tOut}` : tIn,
             amountIn: parseFloat(ethers.formatUnits(ev.args.amountIn, 18)).toLocaleString("en-US", {
-              minimumFractionDigits: tIn === "mJPY" ? 0 : 2,
-              maximumFractionDigits: tIn === "mJPY" ? 0 : 2,
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 3,
             }),
             amountOut: parseFloat(ethers.formatUnits(ev.args.amountOut, 18)).toLocaleString("en-US", {
-              minimumFractionDigits: tOut === "mJPY" ? 0 : 2,
-              maximumFractionDigits: tOut === "mJPY" ? 0 : 2,
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 3,
             }),
             blockNumber: ev.blockNumber,
           };

@@ -8,9 +8,9 @@ import { useToast } from "./ToastContext";
 export default function TokenBalancesModal({ isOpen, onClose, walletAddress, currentUser = null }) {
   const toast = useToast();
   const [balances, setBalances] = useState({
-    mUSD: "0.00",
-    mEUR: "0.00",
-    mJPY: "0",
+    USDC: "0.00",
+    ETH: "0.00",
+    LINK: "0.00",
   });
   const [ethBalance, setEthBalance] = useState("0.0000");
   const [chainId, setChainId] = useState(SEPOLIA_CHAIN_ID);
@@ -23,7 +23,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
   const fetchAllBalances = useCallback(async () => {
     if (!effectiveAddress) {
       setEthBalance("0.0000");
-      setBalances({ mUSD: "0.00", mEUR: "0.00", mJPY: "0" });
+      setBalances({ USDC: "0.00", ETH: "0.00", LINK: "0.00" });
       return;
     }
     setLoading(true);
@@ -51,13 +51,12 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
         try {
           const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
           const bal = await contract.balanceOf(effectiveAddress);
-          const decimals = token.symbol === "mJPY" ? 0 : 2;
           newBals[token.symbol] = parseFloat(ethers.formatUnits(bal, 18)).toLocaleString("en-US", {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 3,
           });
         } catch {
-          newBals[token.symbol] = token.symbol === "mJPY" ? "0" : "0.00";
+          newBals[token.symbol] = "0.00";
         }
       }
       setBalances(newBals);
@@ -155,7 +154,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
           </button>
         </div>
 
-        {/* Status Bar & Refresh (Matched to Figma Image 7) */}
+        {/* Status Bar & Refresh */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold">
@@ -200,7 +199,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
           </div>
         )}
 
-        {/* Vibrant Blue Sepolia Gas Banner (Matched 1:1 to Figma Image 7) */}
+        {/* Vibrant Blue Sepolia Gas Banner */}
         <div className="p-5 rounded-2xl bg-gradient-to-r from-[#1951FC] via-[#1c59ff] to-[#0a82d9] text-white shadow-lg shadow-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-blue-100 block">
@@ -239,17 +238,9 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
           </div>
         )}
 
-        {/* 3-Column Mock Token Cards Grid (Matched 1:1 to Figma Image 7) */}
+        {/* 3-Column Mock Token Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {TOKENS.map((t) => {
-            const shortBadge = t.symbol.slice(0, 2);
-            const badgeBg =
-              t.symbol === "mUSD"
-                ? "bg-[#1951FC]"
-                : t.symbol === "mEUR"
-                ? "bg-teal-500"
-                : "bg-indigo-600";
-
             return (
               <div
                 key={t.address}
@@ -257,10 +248,8 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
               >
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-2">
-                    <span className={`w-6 h-6 rounded-full ${badgeBg} text-white text-[10px] font-extrabold flex items-center justify-center`}>
-                      {shortBadge}
-                    </span>
-                    <span className="font-extrabold text-xs text-[#0B192C]">{t.name}</span>
+                    <TokenIcon symbol={t.symbol} size="w-6 h-6" />
+                    <span className="font-extrabold text-xs text-[#0B192C]">{t.symbol}</span>
                   </div>
                   <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-extrabold uppercase">
                     MOCK
@@ -269,7 +258,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
 
                 <div>
                   <span className="text-[9px] font-bold uppercase text-slate-400 block">
-                    SALDO CONTOH
+                    SALDO SIMULASI
                   </span>
                   <div className="text-base font-extrabold text-[#0B192C] font-mono mt-0.5">
                     {loading ? "..." : balances[t.symbol] || "0.00"} {t.symbol}
@@ -350,7 +339,7 @@ export default function TokenBalancesModal({ isOpen, onClose, walletAddress, cur
         </div>
 
         <p className="text-[10px] text-slate-400 text-center italic">
-          Simulasi akademik. Token mUSD, mEUR, dan mJPY adalah mock token di Sepolia Testnet, bukan mata uang nyata.
+          Simulasi akademik. Token USDC, ETH, dan LINK di sini adalah mock token ERC-20 di Sepolia Testnet, bukan aset bernilai nyata.
         </p>
       </div>
     </div>

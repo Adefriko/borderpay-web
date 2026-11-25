@@ -3,26 +3,24 @@ import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
 import { TOKENS, CONTRACT_ADDRESSES, SWAP_ABI } from "../constants/contracts";
 import { TokenIcon, IconSwap, IconRefresh } from "./Icons";
-import { useToast } from "./ToastContext";
 
 export default function LiveRatesCard() {
-  const toast = useToast();
   const [rates, setRates] = useState({
-    "mUSD-mEUR": "0.9200",
-    "mEUR-mUSD": "1.0870",
-    "mUSD-mJPY": "150.0000",
-    "mJPY-mUSD": "0.0067",
-    "mEUR-mJPY": "163.0000",
-    "mJPY-mEUR": "0.0061",
+    "USDC-ETH": "0.0004",
+    "ETH-USDC": "2500.0000",
+    "USDC-LINK": "0.0667",
+    "LINK-USDC": "15.0000",
+    "ETH-LINK": "166.6667",
+    "LINK-ETH": "0.0060",
   });
   const [loading, setLoading] = useState(false);
   const [simAmount, setSimAmount] = useState("100");
   const [simTokenIn, setSimTokenIn] = useState(TOKENS[0].address);
   const [simTokenOut, setSimTokenOut] = useState(TOKENS[1].address);
   const [calcResult, setCalcResult] = useState({
-    out: "92.0000",
-    minOut: "91.5400",
-    rate: "0.9200",
+    out: "0.0400",
+    minOut: "0.0398",
+    rate: "0.0004",
   });
   const [lastUpdated, setLastUpdated] = useState("Baru saja");
   const [showStatePreviews, setShowStatePreviews] = useState(false);
@@ -76,14 +74,12 @@ export default function LiveRatesCard() {
         }
       }
       setLastUpdated("Baru saja");
-      toast.success("Rate Diperbarui", "Kurs Sepolia berhasil disinkronkan.");
     } catch {
-      // Keep existing simulated rates
       setLastUpdated("2 menit lalu");
     } finally {
       setLoading(false);
     }
-  }, [simAmount, simTokenIn, simTokenOut, toast]);
+  }, [simAmount, simTokenIn, simTokenOut]);
 
   useEffect(() => {
     fetchRates();
@@ -111,7 +107,7 @@ export default function LiveRatesCard() {
   };
 
   const currentPairKey = `${tokenInInfo.symbol}-${tokenOutInfo.symbol}`;
-  const currentPairRate = rates[currentPairKey] || calcResult?.rate || "0.9200";
+  const currentPairRate = rates[currentPairKey] || calcResult?.rate || "0.0004";
 
   return (
     <div className="space-y-6 text-[#0B192C]">
@@ -122,7 +118,7 @@ export default function LiveRatesCard() {
             Kurs & Simulator
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Simulasi kurs enam pasangan token mock di Ethereum Sepolia Testnet.
+            Simulasi kurs enam pasangan token mock (USDC, ETH, LINK) di Ethereum Sepolia Testnet.
           </p>
         </div>
 
@@ -137,9 +133,8 @@ export default function LiveRatesCard() {
         </button>
       </div>
 
-      {/* Main Simulator Card (Matching Figma Image 4) */}
+      {/* Main Simulator Card */}
       <div className="rounded-3xl p-4 sm:p-6 lg:p-8 glass-panel space-y-6 relative overflow-hidden">
-        
         {/* Converter Inputs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4">
           {/* ANDA BAYAR */}
@@ -255,7 +250,7 @@ export default function LiveRatesCard() {
         </div>
       </div>
 
-      {/* 6 Pair Cards Sub-Grid (Matching Figma Image 4) */}
+      {/* 6 Pair Cards Sub-Grid */}
       <div className="space-y-3">
         <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
           NILAI CONTOH MOCKUP, BUKAN KURS PASAR REAL. KLIK KARTU UNTUK MEMILIH PASANGAN TOKEN DI KALKULATOR.
@@ -263,12 +258,12 @@ export default function LiveRatesCard() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { in: "mUSD", out: "mEUR", rate: rates["mUSD-mEUR"] || "0.9200" },
-            { in: "mEUR", out: "mUSD", rate: rates["mEUR-mUSD"] || "1.0870" },
-            { in: "mUSD", out: "mJPY", rate: rates["mUSD-mJPY"] || "150.0000" },
-            { in: "mJPY", out: "mUSD", rate: rates["mJPY-mUSD"] || "0.0067" },
-            { in: "mEUR", out: "mJPY", rate: rates["mEUR-mJPY"] || "163.0000" },
-            { in: "mJPY", out: "mEUR", rate: rates["mJPY-mEUR"] || "0.0061" },
+            { in: "USDC", out: "ETH", rate: rates["USDC-ETH"] || "0.0004" },
+            { in: "ETH", out: "USDC", rate: rates["ETH-USDC"] || "2500.0000" },
+            { in: "USDC", out: "LINK", rate: rates["USDC-LINK"] || "0.0667" },
+            { in: "LINK", out: "USDC", rate: rates["LINK-USDC"] || "15.0000" },
+            { in: "ETH", out: "LINK", rate: rates["ETH-LINK"] || "166.6667" },
+            { in: "LINK", out: "ETH", rate: rates["LINK-ETH"] || "0.0060" },
           ].map((pair) => {
             const isSelected =
               tokenInInfo.symbol === pair.in && tokenOutInfo.symbol === pair.out;
@@ -297,7 +292,7 @@ export default function LiveRatesCard() {
         </div>
       </div>
 
-      {/* State Previews Toggle (as in Figma Image 4) */}
+      {/* State Previews Toggle */}
       <div className="pt-4 border-t border-slate-200">
         <button
           type="button"
