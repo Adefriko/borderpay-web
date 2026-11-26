@@ -239,6 +239,13 @@ describe("BorderPay Frontend Logic & Web3 Verification Suite", () => {
       const rel = parseBorderPayPaymentLink("/pay?orderId=0x1&receiver=0x2&amount=10", "http://localhost:3000");
       assert.equal(rel, "/pay?orderId=0x1&receiver=0x2&amount=10");
 
+      const fullGeneratedUrl =
+        "https://borderpay.vercel.app/pay?orderId=" +
+        ethers.id("BP-123") +
+        "&receiver=0x70997970C51812dc3A010C7d01b50e0d17dc79C8&tokenOut=0xEF70d487Ee882e97a3F0A1Febd58d9f72e4859dd&amount=250.00&deadline=1893456000&memo=Pembayaran+pesanan&checksum=abcdef1234567890";
+      assert.ok(parseBorderPayPaymentLink(fullGeneratedUrl, "http://localhost:3000").startsWith("/pay?orderId="));
+
+      assert.throws(() => parseBorderPayPaymentLink("https://borderpay.finance/preview"), /Draft Preview/);
       assert.throws(() => parseBorderPayPaymentLink("https://example.com/other"), /bukan halaman pembayaran/);
       assert.throws(() => parseBorderPayPaymentLink("https://borderpay.finance/pay?orderId=0x1"), /Parameter invoice tidak lengkap/);
     });

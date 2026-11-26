@@ -260,7 +260,7 @@ export default function InvoiceHistoryModal({
 
                     {showQrInline && inv.link && (
                       <div className="flex justify-center p-3 rounded-xl bg-white border border-slate-200">
-                        <QRCodeSVG value={inv.link} size={110} level="M" />
+                        <QRCodeSVG value={inv.link} size={184} level="L" includeMargin={true} />
                       </div>
                     )}
 

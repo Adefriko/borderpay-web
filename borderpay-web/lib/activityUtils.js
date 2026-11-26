@@ -294,6 +294,12 @@ export function parseBorderPayPaymentLink(rawText, baseOrigin = "https://borderp
     throw new Error("Harap masukkan atau pindai link invoice BorderPay.");
   }
 
+  if (trimmed === "https://borderpay.finance/preview") {
+    throw new Error(
+      "QR masih berupa Draft Preview. Klik tombol 'Generate QR' di halaman Create QR terlebih dahulu."
+    );
+  }
+
   let urlObj;
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     urlObj = new URL(trimmed);

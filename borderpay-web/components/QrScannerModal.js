@@ -34,16 +34,39 @@ function mapCameraErrorMessage(err) {
   return err?.message || "Gagal menghubungkan ke kamera.";
 }
 
+function decodeRegionWithJsQr(canvas, source, sx, sy, sw, sh, targetW, targetH, whitePad = 0) {
+  if (sw < 16 || sh < 16 || targetW < 16 || targetH < 16) return null;
+  canvas.width = targetW + whitePad * 2;
+  canvas.height = targetH + whitePad * 2;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+
+  if (whitePad > 0) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, sx, sy, sw, sh, whitePad, whitePad, targetW, targetH);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const decoded = jsQR(imageData.data, canvas.width, canvas.height, {
+    inversionAttempts: "attemptBoth",
+  });
+  return decoded?.data || null;
+}
+
 export default function QrScannerModal({ isOpen, onClose }) {
   const router = useRouter();
   const toast = useToast();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const barcodeDetectorRef = useRef(null);
   const fileInputRef = useRef(null);
   const streamRef = useRef(null);
   const isOpenRef = useRef(isOpen);
   const attemptIdRef = useRef(0);
   const cooldownRef = useRef(0);
+  const isScanningRef = useRef(false);
 
   const [cameraState, setCameraState] = useState("idle"); // "idle" | "requesting" | "active" | "error" | "detected"
   const [cameraError, setCameraError] = useState("");
@@ -66,6 +89,20 @@ export default function QrScannerModal({ isOpen, onClose }) {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+  }, []);
+
+  const getNativeDetector = useCallback(() => {
+    if (typeof window === "undefined" || !("BarcodeDetector" in window)) return null;
+    if (barcodeDetectorRef.current === false) return null;
+    if (!barcodeDetectorRef.current) {
+      try {
+        barcodeDetectorRef.current = new window.BarcodeDetector({ formats: ["qr_code"] });
+      } catch {
+        barcodeDetectorRef.current = false;
+        return null;
+      }
+    }
+    return barcodeDetectorRef.current;
   }, []);
 
   const startCamera = useCallback(
@@ -102,8 +139,8 @@ export default function QrScannerModal({ isOpen, onClose }) {
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: { ideal: requestedFacing },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
             },
             audio: false,
           });
@@ -112,7 +149,6 @@ export default function QrScannerModal({ isOpen, onClose }) {
           if (!fallbackErrors.includes(constraintErr?.name)) {
             throw constraintErr;
           }
-          // Desktop/laptop webcams frequently reject facingMode/resolution hints
           stream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: false,
@@ -181,6 +217,23 @@ export default function QrScannerModal({ isOpen, onClose }) {
     [onClose, router, stopCamera]
   );
 
+  const handleDecodedPayload = useCallback(
+    (rawPayload) => {
+      const origin = typeof window !== "undefined" ? window.location.origin : "https://borderpay.local";
+      setManualInput(rawPayload);
+      try {
+        const targetPath = parseBorderPayPaymentLink(rawPayload, origin);
+        toast.success("QR Terdeteksi", "Membuka halaman pembayaran invoice...");
+        navigateToInvoice(targetPath);
+        return true;
+      } catch (err) {
+        setValidationError(err.message || "QR terbaca, namun bukan tagihan BorderPay (/pay).");
+        return false;
+      }
+    },
+    [navigateToInvoice, toast]
+  );
+
   const processInvoiceLink = useCallback(
     (rawText) => {
       setValidationError("");
@@ -212,56 +265,71 @@ export default function QrScannerModal({ isOpen, onClose }) {
     };
   }, [isOpen, facingMode, startCamera, stopCamera]);
 
-  // Real-time QR decoding loop while camera stream is active
+  // Hybrid real-time QR decoding loop: native BarcodeDetector + full-res/center-ROI jsQR
   useEffect(() => {
     if (!isOpen || cameraState !== "active") return;
 
-    const timerId = setInterval(() => {
+    const timerId = setInterval(async () => {
+      if (isScanningRef.current) return;
       const video = videoRef.current;
       if (!video || video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) {
         return;
       }
 
-      if (!canvasRef.current) {
-        canvasRef.current = document.createElement("canvas");
-      }
-      const canvas = canvasRef.current;
-      const scale = Math.min(1, 720 / Math.max(video.videoWidth, video.videoHeight));
-      const width = Math.max(1, Math.floor(video.videoWidth * scale));
-      const height = Math.max(1, Math.floor(video.videoHeight * scale));
+      isScanningRef.current = true;
+      try {
+        let detectedText = null;
 
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-      }
-
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (!ctx) return;
-      ctx.drawImage(video, 0, 0, width, height);
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const decoded = jsQR(imageData.data, width, height, {
-        inversionAttempts: "attemptBoth",
-      });
-
-      if (decoded?.data) {
-        const now = Date.now();
-        if (now - cooldownRef.current < 1500) return;
-        cooldownRef.current = now;
-
-        setManualInput(decoded.data);
-        try {
-          const origin = typeof window !== "undefined" ? window.location.origin : "https://borderpay.local";
-          const targetPath = parseBorderPayPaymentLink(decoded.data, origin);
-          toast.success("QR Terdeteksi", "Membuka halaman pembayaran invoice...");
-          navigateToInvoice(targetPath);
-        } catch (err) {
-          setValidationError(err.message || "QR terbaca, namun bukan tagihan BorderPay.");
+        // 1. Hardware / native Chromium BarcodeDetector excels at dense screen QRs
+        const detector = getNativeDetector();
+        if (detector) {
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes && barcodes.length > 0 && barcodes[0]?.rawValue) {
+              detectedText = barcodes[0].rawValue;
+            }
+          } catch {
+            // Fall through to jsQR
+          }
         }
+
+        // 2. Fallback / universal jsQR multi-region decoding at native resolution
+        if (!detectedText) {
+          if (!canvasRef.current) {
+            canvasRef.current = document.createElement("canvas");
+          }
+          const canvas = canvasRef.current;
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+
+          // Pass A: High-detail center reticle ROI (gives ~2-3x more pixels per QR module)
+          const roiSize = Math.floor(Math.min(vw, vh) * 0.72);
+          const roiX = Math.floor((vw - roiSize) / 2);
+          const roiY = Math.floor((vh - roiSize) / 2);
+          detectedText = decodeRegionWithJsQr(canvas, video, roiX, roiY, roiSize, roiSize, roiSize, roiSize);
+
+          // Pass B: Full frame (up to 1280px) if QR fills edge-to-edge or sits off-center
+          if (!detectedText) {
+            const fullScale = Math.min(1, 1280 / Math.max(vw, vh));
+            const fw = Math.max(1, Math.floor(vw * fullScale));
+            const fh = Math.max(1, Math.floor(vh * fullScale));
+            detectedText = decodeRegionWithJsQr(canvas, video, 0, 0, vw, vh, fw, fh);
+          }
+        }
+
+        if (detectedText && isOpenRef.current) {
+          const now = Date.now();
+          if (now - cooldownRef.current < 1500) return;
+          cooldownRef.current = now;
+          handleDecodedPayload(detectedText);
+        }
+      } finally {
+        isScanningRef.current = false;
       }
-    }, 170);
+    }, 180);
 
     return () => clearInterval(timerId);
-  }, [isOpen, cameraState, navigateToInvoice, toast]);
+  }, [isOpen, cameraState, getNativeDetector, handleDecodedPayload]);
 
   const handleToggleCameraFacing = () => {
     const next = facingMode === "environment" ? "user" : "environment";
@@ -289,30 +357,54 @@ export default function QrScannerModal({ isOpen, onClose }) {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const maxDim = 1024;
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.floor(img.width * scale));
-        const h = Math.max(1, Math.floor(img.height * scale));
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+      img.onload = async () => {
+        let decodedText = null;
 
-        // Paint white base first in case uploaded QR PNG has transparency
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
+        // 1. Try native BarcodeDetector first on full-res image
+        const detector = getNativeDetector();
+        if (detector) {
+          try {
+            const barcodes = await detector.detect(img);
+            if (barcodes && barcodes.length > 0 && barcodes[0]?.rawValue) {
+              decodedText = barcodes[0].rawValue;
+            }
+          } catch {
+            // Fall through to jsQR multi-crop passes
+          }
+        }
 
-        const imageData = ctx.getImageData(0, 0, w, h);
-        const decoded = jsQR(imageData.data, w, h, { inversionAttempts: "attemptBoth" });
-        if (!decoded?.data) {
+        // 2. Multi-pass jsQR (full image with quiet padding, lower card crop, desktop right-half screenshot)
+        if (!decodedText) {
+          const canvas = document.createElement("canvas");
+          const iw = img.width;
+          const ih = img.height;
+          const fullScale = Math.min(1, 2200 / Math.max(iw, ih));
+          const fw = Math.max(1, Math.floor(iw * fullScale));
+          const fh = Math.max(1, Math.floor(ih * fullScale));
+
+          const rightW = Math.max(1, Math.floor(iw * 0.55));
+          const rightScale = Math.min(1, 1800 / Math.max(rightW, ih));
+          decodedText =
+            decodeRegionWithJsQr(canvas, img, 0, 0, iw, ih, fw, fh, 24) ||
+            decodeRegionWithJsQr(canvas, img, 0, Math.floor(ih * 0.14), iw, Math.floor(ih * 0.84), fw, Math.floor(fh * 0.84), 24) ||
+            decodeRegionWithJsQr(
+              canvas,
+              img,
+              Math.floor(iw * 0.45),
+              0,
+              rightW,
+              ih,
+              Math.max(1, Math.floor(rightW * rightScale)),
+              Math.max(1, Math.floor(ih * rightScale)),
+              24
+            );
+        }
+
+        if (!decodedText) {
           setValidationError("Tidak ditemukan QR code yang jelas pada gambar tersebut.");
           return;
         }
-        setManualInput(decoded.data);
-        processInvoiceLink(decoded.data);
+        handleDecodedPayload(decodedText);
       };
       img.onerror = () => {
         setValidationError("Gagal membaca file gambar QR.");
@@ -437,7 +529,7 @@ export default function QrScannerModal({ isOpen, onClose }) {
                 )}
               </div>
 
-              <div className="self-center w-28 h-28 sm:w-36 sm:h-36 border-2 border-dashed border-cyan-400/85 rounded-2xl relative shadow-[0_0_25px_rgba(6,182,212,0.3)] flex items-center justify-center">
+              <div className="self-center w-32 h-32 sm:w-44 sm:h-44 border-2 border-dashed border-cyan-400/85 rounded-2xl relative shadow-[0_0_25px_rgba(6,182,212,0.3)] flex items-center justify-center">
                 <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-scan" />
               </div>
 

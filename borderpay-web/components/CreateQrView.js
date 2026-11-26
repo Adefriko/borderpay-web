@@ -239,26 +239,47 @@ export default function CreateQrView({
               </span>
             </div>
 
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold flex items-center gap-1 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{isExpired ? "Kedaluwarsa" : "Aktif"}</span>
+            <span
+              className={`px-2.5 py-0.5 rounded-full border text-[10px] font-extrabold flex items-center gap-1 shrink-0 ${
+                isExpired
+                  ? "bg-rose-400/20 text-rose-200 border-rose-400/30"
+                  : paymentLink
+                  ? "bg-emerald-400/20 text-emerald-300 border-emerald-400/30"
+                  : "bg-amber-400/20 text-amber-200 border-amber-300/35"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isExpired
+                    ? "bg-rose-400"
+                    : paymentLink
+                    ? "bg-emerald-400 animate-pulse"
+                    : "bg-amber-300"
+                }`}
+              />
+              <span>{isExpired ? "Kedaluwarsa" : paymentLink ? "Aktif" : "Draft Preview"}</span>
             </span>
           </div>
 
           {/* Centered White Rounded QR Container */}
-          <div className="flex justify-center py-2">
+          <div className="flex flex-col items-center justify-center gap-2 py-2">
             <div
               key={orderIdDisplay || "preview"}
-              className="p-3 sm:p-4 rounded-3xl bg-white shadow-lg shadow-black/10 flex items-center justify-center animate-qr-reveal max-w-full"
+              className="p-2.5 sm:p-3 rounded-3xl bg-white shadow-lg shadow-black/10 flex items-center justify-center animate-qr-reveal max-w-full"
             >
               <QRCodeSVG
                 id="borderpay-qr-code"
                 value={paymentLink || "https://borderpay.finance/preview"}
-                size={168}
-                level="M"
-                includeMargin={false}
+                size={204}
+                level="L"
+                includeMargin={true}
               />
             </div>
+            {!paymentLink && (
+              <p className="text-[11px] font-semibold text-blue-100/90 text-center">
+                Klik tombol <strong className="text-white">Generate QR</strong> di formulir agar kode siap dipindai.
+              </p>
+            )}
           </div>
 
           {/* Amount & Subtitle */}

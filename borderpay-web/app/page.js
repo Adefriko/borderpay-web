@@ -472,31 +472,36 @@ export default function Home() {
     const svg = document.getElementById("borderpay-qr-code");
     if (!svg) return;
     const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     const img = new Image();
     img.onload = () => {
-      canvas.width = img.width + 60;
-      canvas.height = img.height + 110;
+      const qrSize = 360;
+      canvas.width = qrSize + 80;
+      canvas.height = qrSize + 150;
 
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.strokeStyle = "#1951FC";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+      ctx.lineWidth = 3;
+      ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
 
       ctx.fillStyle = "#0B192C";
-      ctx.font = "bold 16px sans-serif";
-      ctx.fillText("BorderPay QR Invoice", 30, 40);
+      ctx.font = "bold 20px sans-serif";
+      ctx.fillText("BorderPay QR Invoice", 40, 52);
 
       const selTok =
         TOKENS.find((t) => t.address.toLowerCase() === tokenOut.toLowerCase()) || TOKENS[0];
       ctx.fillStyle = "#1951FC";
-      ctx.font = "12px sans-serif";
-      ctx.fillText(`Total: ${amount} ${selTok.symbol}`, 30, 60);
+      ctx.font = "bold 15px sans-serif";
+      ctx.fillText(`Total: ${amount} ${selTok.symbol}`, 40, 78);
 
-      ctx.drawImage(img, 30, 80);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 40, 102, qrSize, qrSize);
+      URL.revokeObjectURL(url);
 
       const pngFile = canvas.toDataURL("image/png");
       const downloadLink = document.createElement("a");
@@ -505,7 +510,11 @@ export default function Home() {
       downloadLink.click();
       toast.success("QR Diunduh", "File gambar PNG siap dibagikan.");
     };
-    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      toast.error("Gagal Mengunduh", "Tidak dapat merender gambar QR.");
+    };
+    img.src = url;
   };
 
   const exportLedgerCsv = () => {
